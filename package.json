@@ -14,7 +14,7 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "simple-peer": "*",
-    "socket.io": "^4.7.2"
+    "socket.io": "^4.8.3"
   },
   "keywords": [],
   "repository": {
