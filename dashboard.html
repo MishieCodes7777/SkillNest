@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard</title>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #0d1117; }
+
+.app { display: flex; min-height: 100vh; }
+
+.sidebar {
+    width: 220px;
+    background: #111820;
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255,255,255,0.07);
+}
+
+.logo {
+    padding: 0 20px 28px;
+    font-size: 20px;
+    color: #FF3C8E;
+    cursor: pointer;
+}
+
+.nav-item {
+    padding: 10px 20px;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+}
+
+.nav-item:hover {
+    color: white;
+    background: rgba(255,255,255,0.05);
+}
+
+.main {
+    flex: 1;
+    padding: 30px;
+    color: white;
+}
+
+.greeting h1 {
+    font-size: 22px;
+}
+
+.greeting p {
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 20px;
+}
+
+.post-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.post-box input {
+    flex: 1;
+    padding: 10px;
+    background: #161d27;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+}
+
+.post-btn {
+    padding: 10px 18px;
+    background: #2563eb;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.card {
+    background: #161d27;
+    padding: 15px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.join-btn {
+    background: transparent;
+    border: 1px solid #34C759;
+    color: #34C759;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="app">
+
+    <div class="sidebar">
+        <div class="logo" onclick="goToAction()">SkillNest</div>
+
+        <div class="nav-item" onclick="goToAction()">Home</div>
+        <div class="nav-item">My Sessions</div>
+        <div class="nav-item">Messages</div>
+        <div class="nav-item" onclick="goToDashboard()">Explore Skills</div>
+        <div class="nav-item" onclick="openProfile()">Profile</div>
+    </div>
+
+    <div class="main">
+
+        <div class="greeting">
+            <h1 id="username">Hey</h1>
+            <p>What do you want to learn today?</p>
+        </div>
+
+        <div class="post-box">
+            <input id="postInput" placeholder="Share what you're learning..." />
+            <button class="post-btn" onclick="addPost()">Post</button>
+        </div>
+
+        <div id="feedContainer"></div>
+
+    </div>
+
+</div>
+
+<script>
+
+// USER
+function getUser() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("user") || "User";
+}
+
+// NAVIGATION (FIXED)
+function goToAction() {
+    const user = getUser();
+    window.location.href = "action.html?user=" + user;
+}
+
+function goToDashboard() {
+    const user = getUser();
+    window.location.href = "dashboard.html?user=" + user;
+}
+
+function openProfile() {
+    const user = getUser();
+    window.location.href = "profile.html?user=" + user;
+}
+
+// SET USERNAME
+document.getElementById("username").innerText = "Hey " + getUser();
+
+// DATA
+const feedData = [
+    { title: "React Expert available for live session" },
+    { title: "Machine Learning expert ready to guide" }
+];
+
+// RENDER
+function renderFeed() {
+    const container = document.getElementById("feedContainer");
+    container.innerHTML = "";
+
+    feedData.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+            <span>${item.title}</span>
+            <button class="join-btn" onclick="startSession()">Join</button>
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+// POST
+function addPost() {
+    const input = document.getElementById("postInput");
+
+    if (!input.value.trim()) return;
+
+    feedData.unshift({
+        title: input.value
+    });
+
+    input.value = "";
+    renderFeed();
+}
+
+// SESSION
+function startSession() {
+    const meetId = Math.floor(Math.random() * 1000000);
+    const user = getUser();
+
+    window.location.href =
+        "action.html?meet=" + meetId + "&user=" + user;
+}
+
+renderFeed();
+
+</script>
+
+</body>
+</html>

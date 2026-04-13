@@ -1,0 +1,10 @@
+•Bootstrap can’t guess how tall your navbar is,
+•So developer must add spacing.
+
+•One-line rule (remember forever):
+If you use fixed-top, you MUST add top spacing to the content below.
+
+•Rule:
+❌ input inside button = NO
+✅ input outside button = YES
+

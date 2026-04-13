@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillNest</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial;
+            background: #0f0f1a;
+            color: white;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            background: #1c1c2e;
+        }
+
+        .logo {
+            color: #ff4fa3;
+            font-size: 22px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff4fa3, #b983ff);
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 100px 20px;
+        }
+
+        .hero h1 {
+            font-size: 40px;
+            background: linear-gradient(45deg, #ff4fa3, #6c63ff);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .section {
+            padding: 50px;
+        }
+
+        .mentor-grid {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: #1c1c2e;
+            padding: 20px;
+            border-radius: 15px;
+            flex: 1;
+            min-width: 200px;
+            transition: 0.3s;
+        }
+
+        .card:hover {
+            background: linear-gradient(45deg, #ff4fa3, #6c63ff);
+        }
+
+        input {
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            width: 220px;
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav>
+        <div class="logo">SkillNest</div>
+        <button class="btn" onclick="createMeeting()">Start Session</button>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <h1>Learn from Experts for Free</h1>
+        <p>Join live mentorship sessions</p>
+
+        <br>
+
+        <input type="text" id="nameInput" placeholder="Enter your name">
+        <br>
+
+        <input type="text" id="meetInput" placeholder="Enter Meeting ID (for join only)">
+        <br><br>
+
+        <button class="btn" onclick="joinMeeting()">Join Session</button>
+        <button class="btn" onclick="createMeeting()">Create Session</button>
+    </section>
+
+    <!-- MENTORS -->
+    <section class="section">
+        <h2>Top Mentors</h2>
+
+        <div class="mentor-grid">
+
+            <div class="card">
+                <h3>Frontend Mentor</h3>
+                <p>React Expert</p>
+            </div>
+
+            <div class="card">
+                <h3>Startup Mentor</h3>
+                <p>Founder</p>
+            </div>
+
+            <div class="card">
+                <h3>AI Mentor</h3>
+                <p>Machine Learning</p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- SCRIPT -->
+    <script>
+        function joinMeeting() {
+            const meetId = document.getElementById("meetInput").value.trim();
+            const name = document.getElementById("nameInput").value.trim();
+
+            if (!meetId || !name) {
+                alert("Enter name and meeting ID");
+                return;
+            }
+
+            // 🔥 Redirect directly to meeting page
+            window.location.href = `socket.html?meet=${meetId}&user=${name}`;
+        }
+
+        function createMeeting() {
+            const name = document.getElementById("nameInput").value.trim();
+
+            if (!name) {
+                alert("Enter your name");
+                return;
+            }
+
+            // 🔥 Generate clean meeting code (like Google Meet)
+            const meetId = generateMeetingCode();
+
+            // 🔥 Redirect directly to meeting page
+            window.location.href = `socket.html?meet=${meetId}&user=${name}`;
+        }
+
+        // 🔥 Better meeting code generator
+        function generateMeetingCode() {
+            const chars = "abcdefghijklmnopqrstuvwxyz";
+            const part = () =>
+                Array.from({ length: 3 }, () =>
+                    chars[Math.floor(Math.random() * chars.length)]
+                ).join("");
+
+            return `${part()}-${part()}-${part()}`; // abc-def-ghi
+        }
+    </script>
+
+</body>
+
+</html>
