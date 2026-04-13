@@ -16,5 +16,13 @@
     "simple-peer": "*",
     "socket.io": "^4.7.2"
   },
-  "keywords": []
+  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MishieCodes7777/SkillNest.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MishieCodes7777/SkillNest/issues"
+  },
+  "homepage": "https://github.com/MishieCodes7777/SkillNest#readme"
 }
