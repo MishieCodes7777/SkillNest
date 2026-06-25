@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - SkillNest</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #050816;
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .msg-app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Left panel */
+        .left-panel {
+            width: 320px;
+            background: rgba(10, 10, 25, 0.98);
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 20px;
+            padding-top: 70px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .panel-header h2 {
+            font-size: 18px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 14px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+            background: rgba(255, 255, 255, 0.03);
+            color: #8892b0;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(45deg, #FF4FA3, #A855F7);
+            color: white;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-box:focus {
+            border-color: #A855F7;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        /* Contact item */
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .contact-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .contact-item.active {
+            background: rgba(255, 79, 163, 0.05);
+            border-left-color: #FF4FA3;
+        }
+
+        .c-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #FF4FA3, #A855F7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .c-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .c-info h4 {
+            font-size: 14px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .c-info p {
+            font-size: 12px;
+            color: #8892b0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .c-badge {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .c-badge.learner {
+            background: rgba(168, 85, 247, 0.15);
+            color: #A855F7;
+        }
+
+        .c-badge.mentor {
+            background: rgba(255, 79, 163, 0.15);
+            color: #FF4FA3;
+        }
+
+        /* User card (search results) */
+        .user-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .user-card .c-info {
+            flex: 1;
+        }
+
+        .connect-btn {
+            padding: 6px 14px;
+            border: 1px solid #A855F7;
+            background: transparent;
+            color: #A855F7;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .connect-btn:hover {
+            background: #A855F7;
+            color: white;
+        }
+
+        .connect-btn.connected {
+            background: rgba(52, 199, 89, 0.15);
+            border-color: #34c759;
+            color: #34c759;
+            cursor: default;
+        }
+
+        /* Invite section */
+        .invite-box {
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .invite-box p {
+            font-size: 12px;
+            color: #8892b0;
+            margin-bottom: 10px;
+        }
+
+        .invite-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .invite-input {
+            flex: 1;
+            padding: 9px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            color: white;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .invite-input:focus {
+            border-color: #A855F7;
+        }
+
+        .invite-btn {
+            padding: 9px 14px;
+            background: linear-gradient(45deg, #FF4FA3, #A855F7);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .invite-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .invite-msg {
+            font-size: 11px;
+            margin-top: 6px;
+            color: #34c759;
+            display: none;
+        }
+
+        /* Chat panel */
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(10, 10, 25, 0.8);
+        }
+
+        .chat-header h3 {
+            font-size: 16px;
+        }
+
+        .chat-header p {
+            font-size: 12px;
+            color: #34c759;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .msg-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .msg-bubble.sent {
+            align-self: flex-end;
+            background: linear-gradient(45deg, #FF4FA3, #A855F7);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-bubble.received {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-time {
+            font-size: 11px;
+            color: #555;
+            margin-top: 4px;
+        }
+
+        .chat-input-area {
+            padding: 16px 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: #A855F7;
+        }
+
+        .send-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #FF4FA3, #A855F7);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .send-btn .material-icons {
+            font-size: 20px;
+            color: white;
+        }
+
+        /* Empty */
+        .no-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+        }
+
+        .no-chat .material-icons {
+            font-size: 48px;
+            margin-bottom: 12px;
+            color: #A855F7;
+            opacity: 0.4;
+        }
+
+        .empty-text {
+            padding: 30px;
+            text-align: center;
+            color: #555;
+            font-size: 13px;
+        }
+
+        @media(max-width:768px) {
+            .left-panel {
+                width: 250px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="msg-app">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <h2>Messages</h2>
+                <div class="panel-tabs">
+                    <button class="tab-btn active" id="tabChats" onclick="switchTab('chats')">Chats</button>
+                    <button class="tab-btn" id="tabSearch" onclick="switchTab('search')">Find People</button>
+                    <button class="tab-btn" id="tabInvite" onclick="switchTab('invite')">Invite</button>
+                </div>
+                <input class="search-box" type="text" placeholder="Search..." id="searchInput" oninput="handleSearch()">
+            </div>
+            <div class="panel-content" id="panelContent">
+                <div class="empty-text">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Chat Panel -->
+        <div class="chat-panel" id="chatPanel">
+            <div class="no-chat">
+                <span class="material-icons">chat_bubble_outline</span>
+                <p>Select a conversation or find people to connect with</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function _userEmail() { var s = localStorage.getItem('currentUser'); if (s) { try { return JSON.parse(s).email || 'default'; } catch (e) { } } return 'default'; }
+        var MSG_KEY = 'skillnest_msgs_' + _userEmail();
+        var CONN_KEY = 'skillnest_conns_' + _userEmail();
+        var currentChat = null;
+        var currentTab = 'chats';
+        var allUsers = [];
+
+        function getUser() {
+            var s = localStorage.getItem('currentUser');
+            if (s) { try { return JSON.parse(s).name || 'You'; } catch (e) { } }
+            return 'You';
+        }
+        function getMessages() { return JSON.parse(localStorage.getItem(MSG_KEY) || '{}'); }
+        function saveMessages(data) { localStorage.setItem(MSG_KEY, JSON.stringify(data)); }
+        function getConnections() { return JSON.parse(localStorage.getItem(CONN_KEY) || '[]'); }
+        function saveConnections(arr) { localStorage.setItem(CONN_KEY, JSON.stringify(arr)); }
+
+        // Load all users from DB
+        async function loadUsers() {
+            try {
+                var res = await fetch('/api/auth/users');
+                if (res.ok) {
+                    var data = await res.json();
+                    allUsers = (data.users || []).filter(function (u) { return u.name !== getUser(); });
+                }
+            } catch (e) { }
+            showChats();
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tabChats').classList.toggle('active', tab === 'chats');
+            document.getElementById('tabSearch').classList.toggle('active', tab === 'search');
+            document.getElementById('tabInvite').classList.toggle('active', tab === 'invite');
+            var sb = document.getElementById('searchInput');
+            if (tab === 'invite') { sb.style.display = 'none'; }
+            else { sb.style.display = 'block'; sb.placeholder = tab === 'chats' ? 'Search conversations...' : 'Search people by name...'; }
+            sb.value = '';
+            if (tab === 'chats') showChats();
+            else if (tab === 'search') showSearch('');
+            else showInvite();
+        }
+
+        function handleSearch() {
+            var q = document.getElementById('searchInput').value.trim();
+            if (currentTab === 'chats') showChats(q);
+            else showSearch(q);
+        }
+
+        function showChats(filter) {
+            var connections = getConnections();
+            var messages = getMessages();
+            var content = document.getElementById('panelContent');
+
+            if (connections.length === 0) {
+                content.innerHTML = '<div class="empty-text">No conversations yet.<br>Go to "Find People" to connect with others!</div>';
+                return;
+            }
+
+            var filtered = connections;
+            if (filter) filtered = connections.filter(function (c) { return c.toLowerCase().includes(filter.toLowerCase()); });
+
+            content.innerHTML = filtered.map(function (name) {
+                var msgs = messages[name] || [];
+                var lastMsg = msgs.length > 0 ? msgs[msgs.length - 1].text : 'No messages yet';
+                if (lastMsg.length > 30) lastMsg = lastMsg.substring(0, 30) + '...';
+                var user = allUsers.find(function (u) { return u.name === name; });
+                var role = user ? user.role : '';
+                return '<div class="contact-item ' + (currentChat === name ? 'active' : '') + '" onclick="openChat(\'' + name + '\')"><div class="c-avatar">' + name.charAt(0).toUpperCase() + '</div><div class="c-info"><h4>' + name + '</h4><p>' + lastMsg + '</p></div>' + (role ? '<span class="c-badge ' + role + '">' + role + '</span>' : '') + '</div>';
+            }).join('');
+        }
+
+        function showSearch(q) {
+            var content = document.getElementById('panelContent');
+            var connections = getConnections();
+
+            if (allUsers.length === 0) {
+                content.innerHTML = '<div class="empty-text">No other users on SkillNest yet.<br>Invite friends using the box below!</div>';
+                return;
+            }
+
+            var results = allUsers;
+            if (q) results = allUsers.filter(function (u) { return u.name.toLowerCase().includes(q.toLowerCase()) || u.email.toLowerCase().includes(q.toLowerCase()); });
+
+            if (results.length === 0) {
+                content.innerHTML = '<div class="empty-text">No users found for "' + q + '"</div>';
+                return;
+            }
+
+            content.innerHTML = results.map(function (u) {
+                var isConnected = connections.includes(u.name);
+                return '<div class="user-card"><div class="c-avatar">' + u.name.charAt(0).toUpperCase() + '</div><div class="c-info"><h4>' + u.name + '</h4><p>' + u.role + ' &bull; ' + u.email + '</p></div><button class="connect-btn ' + (isConnected ? 'connected' : '') + '" onclick="' + (isConnected ? '' : 'connectUser(\'' + u.name + '\')') + '">' + (isConnected ? 'Connected' : 'Connect') + '</button></div>';
+            }).join('');
+        }
+
+        function connectUser(name) {
+            var connections = getConnections();
+            if (!connections.includes(name)) {
+                connections.push(name);
+                saveConnections(connections);
+            }
+            // Track activity
+            var d = JSON.parse(localStorage.getItem('skillnest_user_data') || '{}');
+            d.mentors = (d.mentors || 0) + 1;
+            d.activity = d.activity || [];
+            d.activity.unshift({ text: 'Connected with ' + name, time: 'Just now' });
+            localStorage.setItem('skillnest_user_data', JSON.stringify(d));
+
+            showSearch(document.getElementById('searchInput').value);
+        }
+
+        function openChat(name) {
+            currentChat = name;
+            showChats();
+            var messages = getMessages();
+            var chatMsgs = messages[name] || [];
+            var panel = document.getElementById('chatPanel');
+            var user = allUsers.find(function (u) { return u.name === name; });
+            var role = user ? user.role : '';
+
+            panel.innerHTML = '<div class="chat-header"><div class="c-avatar" style="width:36px;height:36px;font-size:14px;">' + name.charAt(0).toUpperCase() + '</div><div><h3>' + name + '</h3><p>' + role + '</p></div></div><div class="chat-messages" id="chatMessages"></div><div class="chat-input-area"><input class="chat-input" id="msgInput" placeholder="Type a message..." onkeypress="if(event.key===\'Enter\')sendMsg()"><button class="send-btn" onclick="sendMsg()"><span class="material-icons">send</span></button></div>';
+            renderMessages(chatMsgs);
+        }
+
+        function renderMessages(msgs) {
+            var el = document.getElementById('chatMessages');
+            if (!el) return;
+            if (msgs.length === 0) {
+                el.innerHTML = '<div style="text-align:center;color:#555;padding:40px;font-size:13px;">No messages yet. Say hello!</div>';
+                return;
+            }
+            el.innerHTML = msgs.map(function (m) {
+                return '<div><div class="msg-bubble ' + (m.from === 'me' ? 'sent' : 'received') + '">' + m.text + '</div><div class="msg-time" style="text-align:' + (m.from === 'me' ? 'right' : 'left') + '">' + m.time + '</div></div>';
+            }).join('');
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function sendMsg() {
+            var input = document.getElementById('msgInput');
+            var text = input.value.trim();
+            if (!text || !currentChat) return;
+
+            var messages = getMessages();
+            if (!messages[currentChat]) messages[currentChat] = [];
+            var now = new Date();
+            var time = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+            messages[currentChat].push({ from: 'me', text: text, time: time });
+            saveMessages(messages);
+            input.value = '';
+            renderMessages(messages[currentChat]);
+        }
+
+        function sendInvite() {
+            var email = document.getElementById('inviteEmail').value.trim();
+            if (!email || !email.includes('@')) { alert('Enter a valid email'); return; }
+            var code = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+            var link = window.location.origin + '/user-signup.html?ref=' + code;
+            document.getElementById('inviteLink').value = link;
+            document.getElementById('inviteLinkBox').style.display = 'block';
+            document.getElementById('inviteSuccess').innerText = 'Invite link generated for ' + email;
+            document.getElementById('inviteSuccess').style.display = 'block';
+        }
+
+        function showInvite() {
+            var content = document.getElementById('panelContent');
+            content.innerHTML = '<div style="padding:20px;"><h4 style="font-size:15px;margin-bottom:10px;">Invite a Friend</h4><p style="font-size:13px;color:#8892b0;margin-bottom:16px;">Generate a unique signup link for your friend.</p><input class="search-box" type="email" id="inviteEmail" placeholder="Friend\'s email" style="margin-bottom:12px;"><button onclick="sendInvite()" style="width:100%;padding:11px;background:linear-gradient(45deg,#FF4FA3,#A855F7);border:none;border-radius:8px;color:white;font-size:14px;font-weight:600;cursor:pointer;">Generate Invite Link</button><div id="inviteLinkBox" style="display:none;margin-top:14px;"><p style="font-size:12px;color:#8892b0;margin-bottom:6px;">Share this link with your friend:</p><input class="search-box" id="inviteLink" readonly onclick="copyLink()" style="font-size:12px;cursor:pointer;color:#34c759;background:rgba(52,199,89,0.05);border-color:rgba(52,199,89,0.2);"><p style="font-size:11px;color:#555;margin-top:4px;">Click the link to copy</p></div><p id="inviteSuccess" style="display:none;font-size:13px;color:#34c759;margin-top:10px;text-align:center;"></p></div>';
+        }
+
+        function copyLink() {
+            var el = document.getElementById('inviteLink');
+            el.select();
+            navigator.clipboard.writeText(el.value);
+            document.getElementById('inviteSuccess').innerText = 'Link copied to clipboard!';
+        }
+
+        loadUsers();
+
+        // Auto-open last conversation on page load
+        setTimeout(function () {
+            var connections = getConnections();
+            if (connections.length > 0) {
+                // Find the contact with most recent message
+                var messages = getMessages();
+                var last = connections[0]; // default to first
+                connections.forEach(function (c) {
+                    if (messages[c] && messages[c].length > 0) last = c;
+                });
+                // Simulate click on that contact
+                var items = document.querySelectorAll('.contact-item');
+                if (items.length > 0) items[0].click();
+            }
+        }, 500);
+    </script>
+    <script src="public/Assets/js/sidebar.js"></script>
+</body>
+
+</html>
