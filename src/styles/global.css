@@ -1,0 +1,37 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+}
+
+body {
+    font-family: 'Google Sans Flex', 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #050816;
+    color: white;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+ul {
+    list-style: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+}
+
+.material-icons {
+    font-size: 24px;
+    cursor: pointer;
+}

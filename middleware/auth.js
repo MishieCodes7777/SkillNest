@@ -1,9 +1,9 @@
 const jwt = require("jsonwebtoken");
+const { isBlacklisted } = require("./tokenBlacklist");
 require("dotenv").config();
 
 // Middleware to verify JWT token from cookies or Authorization header
 function verifyToken(req, res, next) {
-    // Check cookie first, then Authorization header
     const token =
         req.cookies?.token ||
         (req.headers.authorization && req.headers.authorization.split(" ")[1]);
@@ -15,9 +15,17 @@ function verifyToken(req, res, next) {
         });
     }
 
+    // Check blacklist
+    if (isBlacklisted(token)) {
+        return res.status(401).json({
+            success: false,
+            message: "Token has been invalidated. Please log in again.",
+        });
+    }
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded; // { id, email, role }
+        req.user = decoded;
         next();
     } catch (err) {
         return res.status(401).json({

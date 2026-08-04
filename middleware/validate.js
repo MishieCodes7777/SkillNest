@@ -9,6 +9,15 @@ const signupValidation = [
         .isLength({ min: 2, max: 100 })
         .withMessage("Name must be between 2 and 100 characters"),
 
+    body("username")
+        .trim()
+        .notEmpty()
+        .withMessage("Username is required")
+        .isLength({ min: 3, max: 50 })
+        .withMessage("Username must be between 3 and 50 characters")
+        .matches(/^[a-z0-9._]+$/)
+        .withMessage("Username can only contain lowercase letters, numbers, dots, and underscores"),
+
     body("email")
         .trim()
         .notEmpty()

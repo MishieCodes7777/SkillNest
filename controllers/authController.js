@@ -8,19 +8,48 @@ const SALT_ROUNDS = 12;
 // ==================== SIGNUP ====================
 async function signup(req, res) {
     try {
-        const { name, email, password, role } = req.body;
+        const { name, username, email, password, role } = req.body;
         const userRole = role || "learner";
 
+        // Validate username
+        if (!username || username.length < 3) {
+            return res.status(400).json({
+                success: false,
+                message: "Username must be at least 3 characters.",
+            });
+        }
+
+        // Username format: only lowercase letters, numbers, underscores, dots
+        if (!/^[a-z0-9._]+$/.test(username)) {
+            return res.status(400).json({
+                success: false,
+                message: "Username can only contain lowercase letters, numbers, dots, and underscores.",
+            });
+        }
+
         // Check if email already exists
-        const existingUser = await pool.query(
+        const existingEmail = await pool.query(
             "SELECT id FROM users WHERE email = $1",
             [email]
         );
 
-        if (existingUser.rows.length > 0) {
+        if (existingEmail.rows.length > 0) {
             return res.status(409).json({
                 success: false,
-                message: "An account with this email already exists.",
+                message: "An account with this email already exists. Try logging in instead.",
+            });
+        }
+
+        // Check if username already exists
+        const existingUsername = await pool.query(
+            "SELECT id FROM users WHERE username = $1",
+            [username]
+        );
+
+        if (existingUsername.rows.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: "This username is already taken. Try a different one.",
             });
         }
 
@@ -29,10 +58,10 @@ async function signup(req, res) {
 
         // Insert user
         const result = await pool.query(
-            `INSERT INTO users (name, email, password, role) 
-             VALUES ($1, $2, $3, $4) 
-             RETURNING id, name, email, role, created_at`,
-            [name, email, hashedPassword, userRole]
+            `INSERT INTO users (name, username, email, password, role) 
+             VALUES ($1, $2, $3, $4, $5) 
+             RETURNING id, name, username, email, role, created_at`,
+            [name, username, email, hashedPassword, userRole]
         );
 
         const user = result.rows[0];
@@ -58,8 +87,10 @@ async function signup(req, res) {
             user: {
                 id: user.id,
                 name: user.name,
+                username: user.username,
                 email: user.email,
                 role: user.role,
+                created_at: user.created_at,
             },
             token,
         });
@@ -79,7 +110,7 @@ async function login(req, res) {
 
         // Check if user exists
         const result = await pool.query(
-            "SELECT id, name, email, password, role FROM users WHERE email = $1",
+            "SELECT id, name, email, password, role, created_at FROM users WHERE email = $1",
             [email]
         );
 
@@ -91,6 +122,13 @@ async function login(req, res) {
         }
 
         const user = result.rows[0];
+
+        // Try to get roles (column might not exist)
+        let roles = [user.role];
+        try {
+            const rolesResult = await pool.query("SELECT roles FROM users WHERE id = $1", [user.id]);
+            if (rolesResult.rows[0]?.roles) roles = JSON.parse(rolesResult.rows[0].roles);
+        } catch (e) { /* roles column doesn't exist yet, use single role */ }
 
         // Compare password with bcrypt
         const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -123,8 +161,11 @@ async function login(req, res) {
             user: {
                 id: user.id,
                 name: user.name,
+                username: user.username || null,
                 email: user.email,
                 role: user.role,
+                roles: roles,
+                created_at: user.created_at,
             },
             token,
         });
@@ -139,6 +180,13 @@ async function login(req, res) {
 
 // ==================== LOGOUT ====================
 function logout(req, res) {
+    // Blacklist the token so it can't be reused
+    const token = req.cookies?.token || (req.headers.authorization && req.headers.authorization.split(" ")[1]);
+    if (token) {
+        const { addToBlacklist } = require("../middleware/tokenBlacklist");
+        addToBlacklist(token);
+    }
+
     res.clearCookie("token", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",

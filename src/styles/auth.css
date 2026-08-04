@@ -1,0 +1,234 @@
+.auth-page {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.auth-left {
+    flex: 1;
+    background: #0a0a14;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 50px;
+}
+
+.auth-form {
+    width: 100%;
+    max-width: 380px;
+}
+
+.auth-brand {
+    font-size: 26px;
+    color: #ff4fa3;
+    font-weight: bold;
+    margin-bottom: 35px;
+    letter-spacing: 0.5px;
+}
+
+.role-toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    background: #1c1c2e;
+    border-radius: 8px;
+    padding: 5px;
+}
+
+.role-toggle button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #888;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.role-toggle button.active {
+    background: linear-gradient(45deg, #ec4899, #8b5cf6);
+    color: white;
+}
+
+.input-group {
+    margin-bottom: 16px;
+}
+
+.input-group label {
+    display: block;
+    color: #aaa;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 13px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    background: #1c1c2e;
+    color: white;
+    font-size: 15px;
+    transition: 0.2s;
+}
+
+.input-group input:focus {
+    border-color: #8b5cf6;
+}
+
+.forgot-row {
+    text-align: right;
+    margin-bottom: 18px;
+}
+
+.forgot-row a {
+    color: #8b5cf6;
+    font-size: 13px;
+}
+
+.auth-error {
+    color: #ff4d4d;
+    font-size: 13px;
+    text-align: center;
+    padding: 8px;
+    background: rgba(255, 77, 77, 0.1);
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(45deg, #ec4899, #8b5cf6);
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-bottom: 18px;
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(236, 72, 153, 0.4);
+}
+
+.submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    color: #555;
+    font-size: 13px;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.divider span {
+    padding: 0 15px;
+}
+
+.google-btn {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background: transparent;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: 0.2s;
+    margin-bottom: 18px;
+}
+
+.google-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.google-btn img {
+    width: 20px;
+    height: 20px;
+}
+
+.bottom-text {
+    text-align: center;
+    color: #888;
+    font-size: 14px;
+}
+
+.bottom-text a {
+    color: #8b5cf6;
+    font-weight: 600;
+}
+
+.auth-right {
+    flex: 1;
+    position: relative;
+    background: #0a0a14;
+    overflow: hidden;
+}
+
+.auth-right-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.auth-right-overlay h1 {
+    font-size: 56px;
+    font-weight: bold;
+    background: linear-gradient(45deg, #ff4fa3, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.auth-right-overlay p {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 15px;
+    text-align: center;
+    max-width: 280px;
+    line-height: 1.5;
+    margin-top: 12px;
+}
+
+@media (max-width:768px) {
+    .auth-page {
+        flex-direction: column;
+    }
+
+    .auth-right {
+        display: none;
+    }
+
+    .auth-left {
+        padding: 30px 20px;
+    }
+}

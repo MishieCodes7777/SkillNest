@@ -1,0 +1,252 @@
+.sessions-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 60px 30px 40px;
+}
+
+.sess-hero {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.sess-left h1 {
+    font-size: 24px;
+    margin-bottom: 8px;
+    padding-left: 55px;
+}
+
+.sess-left h1 span {
+    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.sess-left p {
+    color: #8892b0;
+    font-size: 14px;
+    margin-bottom: 20px;
+    padding-left: 55px;
+}
+
+.quick-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.qs {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 14px;
+}
+
+.qs-val {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.qs-label {
+    font-size: 11px;
+    color: #8892b0;
+}
+
+.join-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 28px;
+}
+
+.join-card h2 {
+    font-size: 18px;
+    margin-bottom: 18px;
+    text-align: center;
+}
+
+.join-card input {
+    width: 100%;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.join-card input:focus {
+    border-color: #A855F7;
+}
+
+.jc-btns {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.jc-primary {
+    flex: 1;
+    padding: 12px;
+    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.jc-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(255, 79, 163, 0.3);
+}
+
+.jc-secondary {
+    flex: 1;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.sec-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.sec-badges span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #8892b0;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 4px 10px;
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sec-badges .material-icons {
+    font-size: 13px;
+    color: #34c759;
+}
+
+.sess-globe {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.sess-globe img {
+    max-width: 700px;
+    width: 100%;
+}
+
+.sess-section {
+    margin-bottom: 35px;
+}
+
+.sess-section h2 {
+    font-size: 18px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sess-section h2 .material-icons {
+    color: #FF4FA3;
+}
+
+.mentors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+}
+
+.mentor-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: 0.3s;
+}
+
+.mentor-card:hover {
+    border-color: rgba(168, 85, 247, 0.3);
+    transform: translateY(-3px);
+}
+
+.mc-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0 auto 10px;
+}
+
+.mentor-card h4 {
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+
+.mentor-card p {
+    font-size: 12px;
+    color: #8892b0;
+    margin-bottom: 10px;
+}
+
+.mc-follow {
+    padding: 6px 14px;
+    background: transparent;
+    border: 1px solid #FF4FA3;
+    color: #FF4FA3;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.mc-follow:hover {
+    background: #FF4FA3;
+    color: white;
+}
+
+.communities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.comm-tag {
+    padding: 10px 18px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+    font-size: 13px;
+    color: #ccc;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.comm-tag:hover {
+    border-color: #FF4FA3;
+    color: white;
+}
+
+@media(max-width:1024px) {
+    .sess-hero {
+        grid-template-columns: 1fr;
+    }
+}
