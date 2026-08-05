@@ -7,6 +7,10 @@ const pool = new Pool({
     database: process.env.DB_NAME || "skillnest",
     user: process.env.DB_USER || "postgres",
     password: process.env.DB_PASSWORD || "your_password_here",
+
+    ssl: process.env.DB_HOST && process.env.DB_HOST.includes("neon.tech")
+        ? { rejectUnauthorized: false }
+        : false,
 });
 
 // Test connection
