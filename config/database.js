@@ -1,6 +1,11 @@
 const { Pool } = require("pg");
 require("dotenv").config();
 
+// Local Postgres (DB_HOST=localhost, dev) doesn't speak SSL at all.
+// Neon (prod) requires it, and its certs are publicly CA-signed, so
+// verifying them is safe — only skip SSL entirely for local dev.
+const isLocalDb = ["localhost", "127.0.0.1"].includes(process.env.DB_HOST);
+
 const pool = new Pool({
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
@@ -8,9 +13,7 @@ const pool = new Pool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
 
-    ssl: {
-        rejectUnauthorized: false,
-    },
+    ssl: isLocalDb ? false : { rejectUnauthorized: true },
 });
 // Test connection
 pool.query("SELECT NOW()")
@@ -41,6 +44,8 @@ async function initDatabase() {
         await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(50) UNIQUE`).catch(() => { });
         await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username_changes TEXT DEFAULT '[]'`).catch(() => { });
         await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS roles TEXT DEFAULT '["learner"]'`).catch(() => { });
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255)`).catch(() => { });
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expiry TIMESTAMP`).catch(() => { });
         await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_users_email
     ON users(email);
@@ -91,7 +96,82 @@ async function initDatabase() {
             )
         `);
 
+        // Neither FK originally specified ON DELETE behavior, so removing a user
+        // whose id is still referenced (e.g. a future "delete my account" feature,
+        // or the account cleanup used while testing this) fails with a raw
+        // constraint error instead of cleaning up related rows.
+        await pool.query(`ALTER TABLE mentor_profiles DROP CONSTRAINT IF EXISTS mentor_profiles_user_id_fkey`);
+        await pool.query(`ALTER TABLE mentor_profiles ADD CONSTRAINT mentor_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE`);
+        await pool.query(`ALTER TABLE courses DROP CONSTRAINT IF EXISTS courses_mentor_id_fkey`);
+        await pool.query(`ALTER TABLE courses ADD CONSTRAINT courses_mentor_id_fkey FOREIGN KEY (mentor_id) REFERENCES users(id) ON DELETE SET NULL`);
+
         console.log("✅ Courses & Mentor Profiles table ready");
+
+        // Community feed: posts, likes, comments (students + mentors, shared network)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS posts (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                content TEXT NOT NULL,
+                image_url TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS post_likes (
+                id SERIAL PRIMARY KEY,
+                post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(post_id, user_id)
+            )
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS post_comments (
+                id SERIAL PRIMARY KEY,
+                post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_post_likes_post_id ON post_likes(post_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON post_comments(post_id)`);
+        console.log("✅ Community feed tables ready");
+
+        // Mentor applications: becoming a mentor requires review, not a self-service toggle
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS mentor_applications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                motivation TEXT NOT NULL,
+                skills TEXT DEFAULT '',
+                experience TEXT DEFAULT '',
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                reviewed_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_mentor_apps_user_id ON mentor_applications(user_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_mentor_apps_status ON mentor_applications(status)`);
+        console.log("✅ Mentor applications table ready");
+
+        // Notifications — real per-user activity feed for the bell icon
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                type VARCHAR(40) NOT NULL,
+                message TEXT NOT NULL,
+                link TEXT DEFAULT '',
+                is_read BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id, created_at DESC)`);
+        console.log("✅ Notifications table ready");
     } catch (err) {
         console.error("❌ Error creating table:", err.message);
     }

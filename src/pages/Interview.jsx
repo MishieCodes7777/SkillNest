@@ -53,4 +53,13 @@ export default function Interview() {
     );
 }
 
-function formatMd(t) { return t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code style="background:rgba(168,85,247,0.15);padding:2px 6px;border-radius:4px;color:#c4a5ff;">$1</code>').replace(/^### (.*?)$/gm, '<h3 style="margin:12px 0 6px;font-size:15px;">$1</h3>').replace(/^## (.*?)$/gm, '<h2 style="margin:15px 0 8px;font-size:17px;">$1</h2>').replace(/^- (.*?)$/gm, '<li>$1</li>').replace(/\n/g, '<br>'); }
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatMd(t) {
+    t = escapeHtml(t);
+    return t.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code style="background:rgba(168,85,247,0.15);padding:2px 6px;border-radius:4px;color:#c4a5ff;">$1</code>').replace(/^### (.*?)$/gm, '<h3 style="margin:12px 0 6px;font-size:15px;">$1</h3>').replace(/^## (.*?)$/gm, '<h2 style="margin:15px 0 8px;font-size:17px;">$1</h2>').replace(/^- (.*?)$/gm, '<li>$1</li>').replace(/\n/g, '<br>');
+}

@@ -5,6 +5,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Sessions = lazy(() => import('./pages/Sessions'));
 const Messages = lazy(() => import('./pages/Messages'));
@@ -17,6 +19,10 @@ const ResumeReview = lazy(() => import('./pages/ResumeReview'));
 const MeetingRoom = lazy(() => import('./pages/MeetingRoom'));
 const Achievements = lazy(() => import('./pages/Achievements'));
 const Courses = lazy(() => import('./pages/Courses'));
+const Community = lazy(() => import('./pages/Community'));
+const PublicProfile = lazy(() => import('./pages/PublicProfile'));
+const BecomeMentor = lazy(() => import('./pages/BecomeMentor'));
+const AdminMentorApplications = lazy(() => import('./pages/AdminMentorApplications'));
 
 // Mentor pages
 const MentorDashboard = lazy(() => import('./pages/mentor/MentorDashboard'));
@@ -44,6 +50,8 @@ function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password/:token" element={<ResetPassword />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/sessions" element={<Sessions />} />
                     <Route path="/messages" element={<Messages />} />
@@ -56,6 +64,10 @@ function App() {
                     <Route path="/meeting" element={<MeetingRoom />} />
                     <Route path="/achievements" element={<Achievements />} />
                     <Route path="/courses" element={<Courses />} />
+                    <Route path="/community" element={<Community />} />
+                    <Route path="/u/:userId" element={<PublicProfile />} />
+                    <Route path="/become-mentor" element={<BecomeMentor />} />
+                    <Route path="/admin/mentor-applications" element={<AdminMentorApplications />} />
 
                     {/* Mentor Portal */}
                     <Route path="/mentor/dashboard" element={<MentorDashboard />} />

@@ -20,13 +20,16 @@ export default function MentorLayout({ children }) {
     const user = getCurrentUser();
     const [sideOpen, setSideOpen] = useState(false);
     const [avatarOpen, setAvatarOpen] = useState(false);
+    const isMentor = user?.role === 'mentor' || (user?.roles && user.roles.includes('mentor'));
 
     useEffect(() => {
         if (!isLoggedIn()) { navigate('/login'); return; }
-        // Allow access — role check is handled by the login flow
+        // Login alone used to be enough to reach every /mentor/* page — anyone
+        // could type the URL. Now the account must actually hold the mentor role.
+        if (!isMentor) { navigate('/become-mentor'); return; }
     }, []);
 
-    if (!isLoggedIn()) return null;
+    if (!isLoggedIn() || !isMentor) return null;
 
     const ddLinkStyle = { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', color: '#ccc', fontSize: 13, cursor: 'pointer', transition: '0.2s' };
 

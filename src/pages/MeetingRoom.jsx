@@ -1,14 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { getUserData, saveUserData } from '../utils/auth';
+import { getUserData, saveUserData, getCurrentUser, isLoggedIn } from '../utils/auth';
 import { io } from 'socket.io-client';
 import SimplePeer from 'simple-peer';
+import InvitePanel from '../components/InvitePanel';
 
 export default function MeetingRoom() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const meetId = searchParams.get('meet');
-    const userName = searchParams.get('user') || 'User';
+    // Identity comes from the logged-in account, never from the URL — a URL
+    // param can be copy-pasted or spoofed and previously showed up as your
+    // name in someone else's room (and vice versa).
+    const userName = getCurrentUser()?.name || 'User';
+    const [authError, setAuthError] = useState('');
 
     const [micOn, setMicOn] = useState(true);
     const [camOn, setCamOn] = useState(true);
@@ -16,6 +21,7 @@ export default function MeetingRoom() {
     const [chatInput, setChatInput] = useState('');
     const [timer, setTimer] = useState('00:00:00');
     const [remoteStreams, setRemoteStreams] = useState({});
+    const [inviteOpen, setInviteOpen] = useState(false);
 
     const localVideoRef = useRef(null);
     const localStreamRef = useRef(null);
@@ -24,11 +30,14 @@ export default function MeetingRoom() {
     const startTimeRef = useRef(Date.now());
 
     useEffect(() => {
+        if (!isLoggedIn()) { navigate('/login'); return; }
         if (!meetId) { navigate('/sessions'); return; }
         init();
         const interval = setInterval(updateTimer, 1000);
         return () => { clearInterval(interval); cleanup(); };
     }, []);
+
+    if (!isLoggedIn()) return null;
 
     function updateTimer() {
         const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
@@ -43,20 +52,24 @@ export default function MeetingRoom() {
             if (localVideoRef.current) localVideoRef.current.srcObject = stream;
         } catch (e) { console.warn('Camera error', e); }
 
-        const socket = io();
+        const socket = io({ auth: { token: localStorage.getItem('token') } });
         socketRef.current = socket;
         socket.on('connect', () => {
-            socket.emit('userconnect', { displayName: userName, meetingid: meetId });
+            socket.emit('userconnect', { meetingid: meetId });
             socket.on('all-users', users => users.forEach(u => createPeer(u.connectionId, true)));
             socket.on('user-joined', data => createPeer(data.connId, false));
             socket.on('signal', data => { if (!peersRef.current[data.from]) createPeer(data.from, false); peersRef.current[data.from].signal(data.signal); });
             socket.on('user-left', data => { if (peersRef.current[data.connId]) { peersRef.current[data.connId].destroy(); delete peersRef.current[data.connId]; } setRemoteStreams(prev => { const n = { ...prev }; delete n[data.connId]; return n; }); });
             socket.on('chat-message', data => setChatMsgs(prev => [...prev, data]));
         });
+        socket.on('connect_error', (err) => { setAuthError(err.message || 'Could not join the meeting.'); });
     }
 
     function createPeer(connId, initiator) {
-        const peer = new SimplePeer({ initiator, trickle: false, stream: localStreamRef.current });
+        const peer = new SimplePeer({
+            initiator, trickle: false, stream: localStreamRef.current,
+            config: { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] },
+        });
         peersRef.current[connId] = peer;
         peer.on('signal', signal => socketRef.current.emit('signal', { to: connId, signal }));
         peer.on('stream', stream => setRemoteStreams(prev => ({ ...prev, [connId]: stream })));
@@ -87,13 +100,27 @@ export default function MeetingRoom() {
 
     const btnStyle = (active, color) => ({ width: 44, height: 44, borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: active ? '#2a2a2a' : (color || '#ff4d4d') });
 
+    if (authError) {
+        return (
+            <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, background: '#0A0A0A', color: 'white' }}>
+                <p style={{ color: '#ff8080', fontSize: 15 }}>{authError}</p>
+                <button onClick={() => navigate('/login')} style={{ padding: '10px 22px', background: '#6C2BD9', border: 'none', borderRadius: 8, color: 'white', cursor: 'pointer' }}>Log in again</button>
+            </div>
+        );
+    }
+
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#0A0A0A', color: 'white' }}>
             {/* Top */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 20px', background: '#111', borderBottom: '1px solid #222' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}><span style={{ color: '#9F67FF', fontWeight: 'bold' }}>SkillNest</span><span style={{ fontSize: 12, color: '#666', background: '#1a1a1a', padding: '4px 10px', borderRadius: 4 }}>{meetId}</span></div>
                 <span style={{ fontSize: 14, color: '#ccc', fontVariantNumeric: 'tabular-nums' }}>{timer}</span>
-                <span style={{ fontSize: 12, color: '#888' }}>{Object.keys(remoteStreams).length + 1} participants</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ fontSize: 12, color: '#888' }}>{Object.keys(remoteStreams).length + 1} participants</span>
+                    <button onClick={() => setInviteOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 20, color: '#c4a5ff', fontSize: 12.5, cursor: 'pointer' }}>
+                        <span className="material-icons" style={{ fontSize: 16 }}>person_add</span> Invite
+                    </button>
+                </div>
             </div>
 
             {/* Video + Chat */}
@@ -125,6 +152,20 @@ export default function MeetingRoom() {
                 <button onClick={toggleCam} style={btnStyle(camOn)}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>{camOn ? 'videocam' : 'videocam_off'}</span></button>
                 <button onClick={endMeeting} style={{ ...btnStyle(false, '#ff4d4d'), width: 54, borderRadius: 12 }}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>call_end</span></button>
             </div>
+
+            {inviteOpen && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setInviteOpen(false)}>
+                    <div style={{ background: '#0d1025', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, width: 440, maxWidth: '90vw', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 22px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                            <h3 style={{ fontSize: 16 }}>Invite to this session</h3>
+                            <button onClick={() => setInviteOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><span className="material-icons" style={{ color: '#888', fontSize: 22 }}>close</span></button>
+                        </div>
+                        <div style={{ padding: 20 }}>
+                            <InvitePanel meetCode={meetId} />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

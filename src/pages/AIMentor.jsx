@@ -63,8 +63,15 @@ export default function AIMentor() {
     );
 }
 
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function formatText(text) {
     if (!text) return '';
+    text = escapeHtml(text);
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
     text = text.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');

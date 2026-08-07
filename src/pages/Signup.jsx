@@ -9,6 +9,7 @@ export default function Signup() {
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [role, setRole] = useState('learner');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -32,7 +33,10 @@ export default function Signup() {
             if (data.success) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('currentUser', JSON.stringify(data.user));
-                navigate('/dashboard');
+                // Every account starts as a learner (see authController.signup) —
+                // picking "Teach Skills" here means "I'd like to apply," not an
+                // instant mentor grant, so route to the application instead.
+                navigate(role === 'mentor' ? '/become-mentor' : '/dashboard');
             } else { setError(data.message); }
         } catch (err) { setError('Unable to connect to server.'); }
         setLoading(false);
@@ -46,7 +50,16 @@ export default function Signup() {
                     <div className="input-group"><label>Full Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="Enter your full name" /></div>
                     <div className="input-group"><label>Username</label><input value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))} placeholder="e.g. bhavya.k or coder_123" /><span style={{ fontSize: '11px', color: '#555' }}>Lowercase, numbers, dots, underscores only</span></div>
                     <div className="input-group"><label>Email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" /></div>
-                    <div className="input-group"><label>Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Create a password" /><span style={{ fontSize: '11px', color: '#555' }}>Min 6 chars, must include a number</span></div>
+                    <div className="input-group">
+                        <label>Password</label>
+                        <div className="password-field">
+                            <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Create a password" />
+                            <button type="button" className="password-toggle" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                <span className="material-icons">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                            </button>
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#555' }}>Min 6 chars, must include a number</span>
+                    </div>
                     <div className="input-group"><label>I want to</label><select value={role} onChange={e => setRole(e.target.value)} style={{ width: '100%', padding: '13px 16px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', background: '#1c1c2e', color: 'white', fontSize: '15px' }}><option value="learner">Learn Skills</option><option value="mentor">Teach Skills</option></select></div>
                     {error && <div className="auth-error">{error}</div>}
                     <button type="submit" className="submit-btn" disabled={loading}>{loading ? 'Creating...' : 'Sign Up'}</button>

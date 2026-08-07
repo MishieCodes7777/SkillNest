@@ -5,6 +5,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const hpp = require("hpp");
 const morgan = require("morgan");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 // Initialize database
@@ -16,16 +17,30 @@ const app = express();
 
 // 1. Helmet - Secure HTTP headers
 app.use(helmet({
-    contentSecurityPolicy: false, // disabled for dev (React needs inline scripts)
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            // Inline `style={{...}}` props (used throughout the React app) render as
+            // inline style attributes, which need 'unsafe-inline' here to keep working.
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https://images.unsplash.com", "https://www.gstatic.com"],
+            connectSrc: ["'self'", "ws:", "wss:"],
+        },
+    },
     crossOriginEmbedderPolicy: false,
 }));
 
 // 2. Request logging
 app.use(morgan("combined"));
 
-// 3. CORS whitelist
+// 3. CORS whitelist (override with ALLOWED_ORIGINS="https://your-domain.com,https://www.your-domain.com" in prod)
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+    : ["http://localhost:5173", "http://localhost:3000"];
 app.use(cors({
-    origin: ["http://localhost:5173", "http://localhost:3000"],
+    origin: allowedOrigins,
     credentials: true,
 }));
 
@@ -48,16 +63,26 @@ const { apiLimiter, authLimiter } = require("./middleware/rateLimiter");
 app.use("/api", apiLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/signup", authLimiter);
+app.use("/api/auth/forgot-password", authLimiter);
+app.use("/api/auth/reset-password", authLimiter);
 
 // ===== API ROUTES =====
 const authRoutes = require("./routes/auth");
 const aiRoutes = require("./routes/ai");
 const coursesRoutes = require("./routes/courses");
 const mentorRoutes = require("./routes/mentor");
+const communityRoutes = require("./routes/community");
+const mentorApplicationsRoutes = require("./routes/mentorApplications");
+const notificationsRoutes = require("./routes/notifications");
+const passwordResetRoutes = require("./routes/passwordReset");
 app.use("/api/auth", authRoutes);
+app.use("/api/auth", passwordResetRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/courses", coursesRoutes);
 app.use("/api/mentor", mentorRoutes);
+app.use("/api/community", communityRoutes);
+app.use("/api/mentor-applications", mentorApplicationsRoutes);
+app.use("/api/notifications", notificationsRoutes);
 
 // ===== STATIC FILES =====
 const distPath = path.join(__dirname, "dist");
@@ -100,7 +125,22 @@ const server = app.listen(PORT, () => {
 
 // ===== SOCKET.IO =====
 const io = require("socket.io")(server, {
-    cors: { origin: ["http://localhost:5173", "http://localhost:3000"], methods: ["GET", "POST"] }
+    cors: { origin: allowedOrigins, methods: ["GET", "POST"] }
+});
+
+// Require a valid session for every meeting-room connection, and trust ONLY
+// the name from the verified JWT — never a client-supplied display name.
+// (Previously the client could pass any name it liked via `data.displayName`,
+// which is how one user could show up in a room labeled with someone else's name.)
+io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error("Authentication required"));
+    try {
+        socket.user = jwt.verify(token, process.env.JWT_SECRET);
+        next();
+    } catch (err) {
+        next(new Error("Invalid or expired session"));
+    }
 });
 
 let userConnections = [];
@@ -108,16 +148,17 @@ let userConnections = [];
 io.on("connection", (socket) => {
     socket.on("userconnect", (data) => {
         const others = userConnections.filter(p => p.meeting_id === data.meetingid);
-        userConnections.push({ connectionId: socket.id, user_id: data.displayName, meeting_id: data.meetingid });
+        userConnections.push({ connectionId: socket.id, user_id: socket.user.name, meeting_id: data.meetingid });
         socket.emit("all-users", others);
-        others.forEach(user => { socket.to(user.connectionId).emit("user-joined", { connId: socket.id, user_id: data.displayName }); });
+        others.forEach(user => { socket.to(user.connectionId).emit("user-joined", { connId: socket.id, user_id: socket.user.name }); });
     });
 
     socket.on("signal", (data) => { socket.to(data.to).emit("signal", { from: socket.id, signal: data.signal }); });
 
     socket.on("chat-message", (data) => {
         const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
-        meetUsers.forEach(u => { socket.to(u.connectionId).emit("chat-message", data); });
+        const safeData = { ...data, name: socket.user.name };
+        meetUsers.forEach(u => { socket.to(u.connectionId).emit("chat-message", safeData); });
     });
 
     socket.on("hand-raised", (data) => {

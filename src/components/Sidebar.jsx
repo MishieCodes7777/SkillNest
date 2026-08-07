@@ -8,6 +8,7 @@ const navItems = [
     { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
     { path: '/sessions', icon: 'videocam', label: 'Sessions' },
     { path: '/messages', icon: 'chat', label: 'Messages' },
+    { path: '/community', icon: 'groups', label: 'Community' },
     { path: '/courses', icon: 'school', label: 'Courses' },
     { path: '/profile', icon: 'person', label: 'Profile' },
 ];
@@ -70,11 +71,18 @@ export default function Sidebar() {
                     </Link>
                 ))}
 
-                {isMentor && (
+                {isMentor ? (
                     <>
                         <div className="sn-nav-divider" />
                         <Link to={mentorLink.path} className="sn-nav-item" onClick={() => setOpen(false)} style={{ color: '#A855F7' }}>
                             <span className="material-icons">{mentorLink.icon}</span> {mentorLink.label}
+                        </Link>
+                    </>
+                ) : (
+                    <>
+                        <div className="sn-nav-divider" />
+                        <Link to="/become-mentor" className="sn-nav-item" onClick={() => setOpen(false)} style={{ color: '#A855F7' }}>
+                            <span className="material-icons">workspace_premium</span> Become a Mentor
                         </Link>
                     </>
                 )}

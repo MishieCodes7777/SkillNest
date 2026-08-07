@@ -9,7 +9,8 @@ router.get("/", async (req, res) => {
         const result = await pool.query("SELECT * FROM courses ORDER BY created_at DESC");
         res.json({ success: true, courses: result.rows });
     } catch (err) {
-        res.json({ success: true, courses: [] });
+        console.error("List courses error:", err);
+        res.status(500).json({ success: false, message: "Could not load courses.", courses: [] });
     }
 });
 

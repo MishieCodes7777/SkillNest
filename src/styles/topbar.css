@@ -113,3 +113,68 @@
 .tb-logout .material-icons {
     color: #ff4d4d !important;
 }
+
+.tb-notif-badge {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 3px;
+    border-radius: 8px;
+    background: #FF4FA3;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.tb-notif-dropdown {
+    width: 320px;
+    max-height: 380px;
+    overflow-y: auto;
+    right: -10px;
+}
+
+.tb-notif-item {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: 0.2s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tb-notif-item:last-child {
+    border-bottom: none;
+}
+
+.tb-notif-item:hover {
+    background: rgba(255, 79, 163, 0.05);
+}
+
+.tb-notif-item.unread {
+    background: rgba(168, 85, 247, 0.07);
+}
+
+.tb-notif-icon {
+    font-size: 18px !important;
+    color: #A855F7 !important;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.tb-notif-item p {
+    margin: 0;
+    font-size: 13px;
+    color: #ddd;
+    line-height: 1.4;
+}
+
+.tb-notif-time {
+    font-size: 11px;
+    color: #666;
+}

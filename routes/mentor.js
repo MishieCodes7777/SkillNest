@@ -20,9 +20,16 @@ router.get("/profile", verifyToken, async (req, res) => {
     }
 });
 
-// PUT /api/mentor/profile - Update mentor profile
+// PUT /api/mentor/profile - Update mentor profile  [mentor role required — was open to any logged-in user]
 router.put("/profile", verifyToken, async (req, res) => {
     try {
+        const requester = await pool.query("SELECT role, roles FROM users WHERE id = $1", [req.user.id]);
+        let requesterRoles = [];
+        try { requesterRoles = JSON.parse(requester.rows[0]?.roles || '[]'); } catch (e) { requesterRoles = requester.rows[0] ? [requester.rows[0].role] : []; }
+        if (!requesterRoles.includes('mentor')) {
+            return res.status(403).json({ success: false, message: "Only verified mentors can set up a mentor profile." });
+        }
+
         const { bio, skills, categories, languages, experience, linkedin, github, portfolio, twitter, profile_photo, hourly_rate, customLinks } = req.body;
 
         // Upsert mentor profile

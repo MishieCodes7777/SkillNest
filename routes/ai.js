@@ -1,12 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const Groq = require("groq-sdk");
+const { verifyToken } = require("../middleware/auth");
 require("dotenv").config();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// POST /api/ai/interview - Get interview prep for a company
-router.post("/interview", async (req, res) => {
+// POST /api/ai/interview - Get interview prep for a company  [auth required — was public, unmetered]
+router.post("/interview", verifyToken, async (req, res) => {
     try {
         const { company, topic } = req.body;
 
@@ -45,8 +46,8 @@ Format your response clearly with headers and bullet points. Be specific to ${co
     }
 });
 
-// POST /api/ai/chat - General AI chat (for AI Mentor)
-router.post("/chat", async (req, res) => {
+// POST /api/ai/chat - General AI chat (for AI Mentor)  [auth required — was public, unmetered]
+router.post("/chat", verifyToken, async (req, res) => {
     try {
         const { message } = req.body;
 

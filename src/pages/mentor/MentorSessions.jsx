@@ -1,16 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import MentorLayout from '../../components/MentorLayout';
-import { getCurrentUser } from '../../utils/auth';
 
 export default function MentorSessions() {
     const navigate = useNavigate();
-    const user = getCurrentUser();
-    const [sessionTitle, setSessionTitle] = useState('');
 
     function createSession() {
         const code = Array.from({ length: 3 }, () => Math.random().toString(36).substring(2, 5)).join('-');
-        navigate(`/meeting?meet=${code}&user=${user?.name || 'Mentor'}`);
+        navigate(`/meeting?meet=${code}`);
     }
 
     return (

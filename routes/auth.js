@@ -19,7 +19,11 @@ router.get("/me", verifyToken, getMe);
 // GET /api/auth/verify - Check if token is valid (for page protection)
 router.get("/verify", verifyToken, verifyAuth);
 
-// POST /api/auth/add-role - Add a role to existing account (become mentor / become learner)
+// POST /api/auth/add-role - Add a role to existing account.
+// Switching to 'learner' is instant — an existing mentor doesn't need reverification.
+// Switching to 'mentor' is NOT granted here anymore — it requires a reviewed
+// application (see routes/mentorApplications.js) so an account can't just
+// self-upgrade into posting/teaching as a mentor with no verification.
 router.post("/add-role", verifyToken, async (req, res) => {
     const pool = require("../config/database");
     const { role } = req.body;
@@ -30,7 +34,6 @@ router.post("/add-role", verifyToken, async (req, res) => {
     }
 
     try {
-        // Get current roles
         const user = await pool.query("SELECT role, roles FROM users WHERE id = $1", [userId]);
         if (user.rows.length === 0) return res.status(404).json({ success: false, message: "User not found" });
 
@@ -39,6 +42,14 @@ router.post("/add-role", verifyToken, async (req, res) => {
 
         if (roles.includes(role)) {
             return res.json({ success: true, message: "You already have this role", roles });
+        }
+
+        if (role === 'mentor') {
+            return res.status(403).json({
+                success: false,
+                needsApplication: true,
+                message: "Becoming a mentor requires a quick application. Submit one and we'll review it.",
+            });
         }
 
         roles.push(role);
@@ -51,6 +62,7 @@ router.post("/add-role", verifyToken, async (req, res) => {
     }
 });
 
+// (Note: check-username stays public — signup form needs it before login)
 // GET /api/auth/check-username?username=xxx - Check if username is available
 router.get("/check-username", async (req, res) => {
     const pool = require("../config/database");
@@ -114,19 +126,20 @@ router.put("/update-username", verifyToken, async (req, res) => {
     }
 });
 
-// GET /api/auth/users - Get all users (for messaging/search)
-router.get("/users", async (req, res) => {
+// GET /api/auth/users - Get all users (for messaging/search)  [auth required — was public]
+router.get("/users", verifyToken, async (req, res) => {
     const pool = require("../config/database");
     try {
         const result = await pool.query("SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC");
         res.json({ success: true, users: result.rows });
     } catch (err) {
-        res.json({ success: true, users: [] });
+        console.error("List users error:", err);
+        res.status(500).json({ success: false, message: "Could not load users.", users: [] });
     }
 });
 
-// GET /api/auth/users/search?q=term - Search users
-router.get("/users/search", async (req, res) => {
+// GET /api/auth/users/search?q=term - Search users  [auth required — was public]
+router.get("/users/search", verifyToken, async (req, res) => {
     const pool = require("../config/database");
     const q = req.query.q || '';
     try {
@@ -136,30 +149,46 @@ router.get("/users/search", async (req, res) => {
         );
         res.json({ success: true, users: result.rows });
     } catch (err) {
-        res.json({ success: true, users: [] });
+        console.error("Search users error:", err);
+        res.status(500).json({ success: false, message: "Search failed.", users: [] });
     }
 });
 
-// GET /api/auth/stats - Platform stats
-router.get("/stats", async (req, res) => {
+// GET /api/auth/stats - Platform stats  [auth required — was public]
+router.get("/stats", verifyToken, async (req, res) => {
     const pool = require("../config/database");
     try {
         const learners = await pool.query("SELECT COUNT(*) FROM users WHERE role = 'learner'");
         const mentors = await pool.query("SELECT COUNT(*) FROM users WHERE role = 'mentor'");
         res.json({ success: true, learners: parseInt(learners.rows[0].count), mentors: parseInt(mentors.rows[0].count) });
     } catch (err) {
-        res.json({ success: true, learners: 0, mentors: 0 });
+        console.error("Stats error:", err);
+        res.status(500).json({ success: false, message: "Could not load stats.", learners: 0, mentors: 0 });
     }
 });
 
-// GET /api/auth/mentors - Get mentors list
-router.get("/mentors", async (req, res) => {
+// GET /api/auth/users/:id - Get one user's public info (for profile pages)
+router.get("/users/:id", verifyToken, async (req, res) => {
+    const pool = require("../config/database");
+    try {
+        const result = await pool.query("SELECT id, name, username, role, created_at FROM users WHERE id = $1", [req.params.id]);
+        if (result.rows.length === 0) return res.status(404).json({ success: false, message: "User not found." });
+        res.json({ success: true, user: result.rows[0] });
+    } catch (err) {
+        console.error("Get user error:", err);
+        res.status(500).json({ success: false, message: "Could not load user." });
+    }
+});
+
+// GET /api/auth/mentors - Get mentors list  [auth required — was public]
+router.get("/mentors", verifyToken, async (req, res) => {
     const pool = require("../config/database");
     try {
         const result = await pool.query("SELECT id, name, email, role, created_at FROM users WHERE role = 'mentor' ORDER BY created_at DESC");
         res.json({ success: true, mentors: result.rows });
     } catch (err) {
-        res.json({ success: true, mentors: [] });
+        console.error("List mentors error:", err);
+        res.status(500).json({ success: false, message: "Could not load mentors.", mentors: [] });
     }
 });
 

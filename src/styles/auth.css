@@ -79,6 +79,36 @@
     border-color: #8b5cf6;
 }
 
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 44px;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    border-radius: 6px;
+}
+
+.password-toggle:hover {
+    color: #ccc;
+}
+
+.password-toggle .material-icons {
+    font-size: 19px;
+}
+
 .forgot-row {
     text-align: right;
     margin-bottom: 18px;

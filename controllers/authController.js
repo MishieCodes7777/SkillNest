@@ -8,8 +8,10 @@ const SALT_ROUNDS = 12;
 // ==================== SIGNUP ====================
 async function signup(req, res) {
     try {
-        const { name, username, email, password, role } = req.body;
-        const userRole = role || "learner";
+        const { name, username, email, password } = req.body;
+        // Every account starts as a learner — becoming a mentor requires a
+        // reviewed application (routes/mentorApplications.js), not a signup flag.
+        const userRole = "learner";
 
         // Validate username
         if (!username || username.length < 3) {
@@ -56,19 +58,21 @@ async function signup(req, res) {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-        // Insert user
+        // Insert user — roles (JSON list) must agree with role from the start,
+        // otherwise a mentor who signed up (vs. added the role later via /add-role)
+        // ends up with role='mentor' but roles=["learner"], a contradictory account state.
         const result = await pool.query(
-            `INSERT INTO users (name, username, email, password, role) 
-             VALUES ($1, $2, $3, $4, $5) 
+            `INSERT INTO users (name, username, email, password, role, roles)
+             VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING id, name, username, email, role, created_at`,
-            [name, username, email, hashedPassword, userRole]
+            [name, username, email, hashedPassword, userRole, JSON.stringify([userRole])]
         );
 
         const user = result.rows[0];
 
         // Generate JWT token
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
+            { id: user.id, name: user.name, email: user.email, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
         );
@@ -142,7 +146,7 @@ async function login(req, res) {
 
         // Generate JWT token
         const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
+            { id: user.id, name: user.name, email: user.email, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
         );
@@ -203,7 +207,7 @@ function logout(req, res) {
 async function getMe(req, res) {
     try {
         const result = await pool.query(
-            "SELECT id, name, email, role, created_at FROM users WHERE id = $1",
+            "SELECT id, name, username, email, role, roles, created_at FROM users WHERE id = $1",
             [req.user.id]
         );
 
@@ -214,9 +218,13 @@ async function getMe(req, res) {
             });
         }
 
+        const row = result.rows[0];
+        let roles = [row.role];
+        try { roles = JSON.parse(row.roles || '[]'); } catch (e) { /* keep single-role fallback */ }
+
         return res.status(200).json({
             success: true,
-            user: result.rows[0],
+            user: { id: row.id, name: row.name, username: row.username, email: row.email, role: row.role, roles, created_at: row.created_at },
         });
     } catch (err) {
         console.error("GetMe error:", err);

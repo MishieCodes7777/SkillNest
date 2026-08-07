@@ -48,4 +48,15 @@ function requireRole(...roles) {
     };
 }
 
-module.exports = { verifyToken, requireRole };
+// Restricts site-admin actions (reviewing mentor applications) to a fixed
+// allowlist of emails — there's no admin role/UI in the DB yet, so this is
+// the lightweight equivalent until one exists.
+function requireAdmin(req, res, next) {
+    const admins = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+    if (!req.user || !admins.includes((req.user.email || "").toLowerCase())) {
+        return res.status(403).json({ success: false, message: "Admin access required." });
+    }
+    next();
+}
+
+module.exports = { verifyToken, requireRole, requireAdmin };

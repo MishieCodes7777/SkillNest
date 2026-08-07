@@ -8,6 +8,7 @@ export default function Login() {
     const [role, setRole] = useState('learner');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -30,25 +31,14 @@ export default function Login() {
             if (data.success) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('currentUser', JSON.stringify(data.user));
-                // If user selected "Teach Skills" but doesn't have mentor role, add it
                 const userRoles = data.user.roles || [data.user.role];
-                if (role === 'mentor' && !userRoles.includes('mentor')) {
-                    // Add mentor role to their account
-                    fetch('/api/auth/add-role', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + data.token },
-                        body: JSON.stringify({ role: 'mentor' })
-                    }).then(r => r.json()).then(d => {
-                        if (d.success) {
-                            const updated = { ...data.user, roles: d.roles, role: 'mentor' };
-                            localStorage.setItem('currentUser', JSON.stringify(updated));
-                            localStorage.setItem('skillnest_has_mentor_role', 'true');
-                        }
-                        navigate('/mentor/dashboard');
-                    }).catch(() => navigate('/mentor/dashboard'));
-                } else if (role === 'mentor' || userRoles.includes('mentor')) {
+                if (userRoles.includes('mentor')) {
                     localStorage.setItem('skillnest_has_mentor_role', 'true');
                     navigate('/mentor/dashboard');
+                } else if (role === 'mentor') {
+                    // Not a verified mentor yet — send them to apply instead of
+                    // granting the role on the spot.
+                    navigate('/become-mentor');
                 } else {
                     navigate('/dashboard');
                 }
@@ -79,7 +69,12 @@ export default function Login() {
 
                     <div className="input-group">
                         <label>Password</label>
-                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" />
+                        <div className="password-field">
+                            <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" />
+                            <button type="button" className="password-toggle" onClick={() => setShowPassword(v => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                <span className="material-icons">{showPassword ? 'visibility_off' : 'visibility'}</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="forgot-row">
