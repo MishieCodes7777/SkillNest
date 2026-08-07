@@ -2,3 +2,4 @@ node_modules/
 .env
 tempCodeRunnerFile.js
 tempCodeRunnerFile.zip
+dist/
