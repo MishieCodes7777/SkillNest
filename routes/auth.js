@@ -19,6 +19,12 @@ router.get("/me", verifyToken, getMe);
 // GET /api/auth/verify - Check if token is valid (for page protection)
 router.get("/verify", verifyToken, verifyAuth);
 
+// GET /api/auth/am-i-admin - lets the frontend show/hide the admin nav link
+router.get("/am-i-admin", verifyToken, (req, res) => {
+    const admins = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+    res.json({ success: true, isAdmin: admins.includes((req.user.email || "").toLowerCase()) });
+});
+
 // PUT /api/auth/change-password - change your own password while logged in
 router.put("/change-password", verifyToken, async (req, res) => {
     const bcrypt = require("bcrypt");

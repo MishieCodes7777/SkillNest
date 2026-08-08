@@ -32,6 +32,7 @@ export default function TopBar() {
     const [avatarOpen, setAvatarOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [isAdmin, setIsAdmin] = useState(false);
     const user = getCurrentUser();
     const initial = user?.name?.charAt(0).toUpperCase() || 'U';
     const isMentor = user?.role === 'mentor' || (user?.roles && user.roles.includes('mentor')) || localStorage.getItem('skillnest_has_mentor_role') === 'true';
@@ -52,6 +53,11 @@ export default function TopBar() {
         loadUnreadCount();
         const interval = setInterval(loadUnreadCount, 30000);
         return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        fetch('/api/auth/am-i-admin', { headers: authHeaders() }).then(r => r.json())
+            .then(d => { if (d.success) setIsAdmin(d.isAdmin); }).catch(() => { });
     }, []);
 
     function loadUnreadCount() {
@@ -114,6 +120,9 @@ export default function TopBar() {
                             <Link to="/mentor/dashboard" className="tb-dd-link" onClick={() => setAvatarOpen(false)}><span className="material-icons">swap_horiz</span> Switch to Mentor</Link>
                         ) : (
                             <Link to="/become-mentor" className="tb-dd-link" onClick={() => setAvatarOpen(false)}><span className="material-icons">workspace_premium</span> Become a Mentor</Link>
+                        )}
+                        {isAdmin && (
+                            <Link to="/admin/mentor-applications" className="tb-dd-link" onClick={() => setAvatarOpen(false)} style={{ color: '#f5a623' }}><span className="material-icons" style={{ color: '#f5a623' }}>shield</span> Admin Panel</Link>
                         )}
                         <div className="tb-dd-divider" />
                         <div className="tb-dd-link tb-logout" onClick={handleLogout}><span className="material-icons">logout</span> Log Out</div>

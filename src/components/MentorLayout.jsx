@@ -20,6 +20,7 @@ export default function MentorLayout({ children }) {
     const user = getCurrentUser();
     const [sideOpen, setSideOpen] = useState(false);
     const [avatarOpen, setAvatarOpen] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
     const isMentor = user?.role === 'mentor' || (user?.roles && user.roles.includes('mentor'));
 
     useEffect(() => {
@@ -27,6 +28,11 @@ export default function MentorLayout({ children }) {
         // Login alone used to be enough to reach every /mentor/* page — anyone
         // could type the URL. Now the account must actually hold the mentor role.
         if (!isMentor) { navigate('/become-mentor'); return; }
+    }, []);
+
+    useEffect(() => {
+        fetch('/api/auth/am-i-admin', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } })
+            .then(r => r.json()).then(d => { if (d.success) setIsAdmin(d.isAdmin); }).catch(() => { });
     }, []);
 
     if (!isLoggedIn() || !isMentor) return null;
@@ -69,6 +75,9 @@ export default function MentorLayout({ children }) {
                                     <div onClick={() => { setAvatarOpen(false); navigate('/mentor/settings'); }} style={ddLinkStyle}><span className="material-icons" style={{ fontSize: 18, color: '#8892b0' }}>person</span> Mentor Profile</div>
                                     <div onClick={() => { setAvatarOpen(false); navigate('/mentor/dashboard'); }} style={ddLinkStyle}><span className="material-icons" style={{ fontSize: 18, color: '#8892b0' }}>dashboard</span> Dashboard</div>
                                     <div onClick={() => { setAvatarOpen(false); navigate('/dashboard'); }} style={ddLinkStyle}><span className="material-icons" style={{ fontSize: 18, color: '#8892b0' }}>swap_horiz</span> Switch to Student</div>
+                                    {isAdmin && (
+                                        <div onClick={() => { setAvatarOpen(false); navigate('/admin/mentor-applications'); }} style={{ ...ddLinkStyle, color: '#f5a623' }}><span className="material-icons" style={{ fontSize: 18, color: '#f5a623' }}>shield</span> Admin Panel</div>
+                                    )}
                                     <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
                                     <div onClick={() => { logout(); window.location.href = '/login'; }} style={{ ...ddLinkStyle, color: '#ff4d4d' }}><span className="material-icons" style={{ fontSize: 18, color: '#ff4d4d' }}>logout</span> Log Out</div>
                                 </div>
