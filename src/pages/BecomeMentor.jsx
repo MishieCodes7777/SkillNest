@@ -10,6 +10,7 @@ function authHeaders(extra) {
 export default function BecomeMentor() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
+    const [isMentor, setIsMentor] = useState(false);
     const [application, setApplication] = useState(null);
     const [motivation, setMotivation] = useState('');
     const [skills, setSkills] = useState('');
@@ -22,28 +23,31 @@ export default function BecomeMentor() {
     async function checkStatus() {
         setLoading(true);
         try {
-            const res = await fetch('/api/mentor-applications/me', { headers: authHeaders() });
-            const data = await res.json();
-            if (data.success) {
-                setApplication(data.application);
-                if (data.application?.status === 'approved') syncApprovedRole();
+            // The account's real role is the source of truth — not just whether
+            // an application record exists. An account can hold the mentor role
+            // without one (e.g. granted directly), and this page should reflect
+            // that correctly instead of showing a stale "please apply" form.
+            const meRes = await fetch('/api/auth/me', { headers: authHeaders() });
+            const meData = await meRes.json();
+            const mentorNow = meData.success && (meData.user.role === 'mentor' || (meData.user.roles || []).includes('mentor'));
+            setIsMentor(mentorNow);
+            if (mentorNow && meData.success) syncRole(meData.user);
+
+            if (!mentorNow) {
+                const res = await fetch('/api/mentor-applications/me', { headers: authHeaders() });
+                const data = await res.json();
+                if (data.success) setApplication(data.application);
             }
         } catch (e) { }
         setLoading(false);
     }
 
-    // If the account was just approved, refresh the locally-cached role so the
-    // mentor portal unlocks without needing to log out and back in.
-    async function syncApprovedRole() {
-        try {
-            const res = await fetch('/api/auth/me', { headers: authHeaders() });
-            const data = await res.json();
-            if (data.success) {
-                const current = getCurrentUser() || {};
-                localStorage.setItem('currentUser', JSON.stringify({ ...current, role: data.user.role, roles: data.user.roles, username: data.user.username }));
-                localStorage.setItem('skillnest_has_mentor_role', 'true');
-            }
-        } catch (e) { }
+    // Keep the locally-cached role in sync with the server so the mentor
+    // portal unlocks without needing to log out and back in.
+    function syncRole(serverUser) {
+        const current = getCurrentUser() || {};
+        localStorage.setItem('currentUser', JSON.stringify({ ...current, role: serverUser.role, roles: serverUser.roles, username: serverUser.username }));
+        localStorage.setItem('skillnest_has_mentor_role', 'true');
     }
 
     async function submit() {
@@ -75,22 +79,22 @@ export default function BecomeMentor() {
                     <p style={{ color: '#8892b0', fontSize: 14 }}>A short application, reviewed by the SkillNest team — this keeps the mentor side of the site trustworthy for everyone learning here.</p>
                 </div>
 
-                {application?.status === 'approved' && (
+                {isMentor && (
                     <div style={card}>
                         <h3 style={{ marginBottom: 10, color: '#34c759' }}>You're a verified mentor!</h3>
-                        <p style={{ color: '#ccc', fontSize: 14, marginBottom: 20 }}>Your application was approved. Head over to your mentor dashboard to set up your profile and create your first course.</p>
+                        <p style={{ color: '#ccc', fontSize: 14, marginBottom: 20 }}>Head over to your mentor dashboard to set up your profile and create your first course.</p>
                         <button onClick={() => navigate('/mentor/dashboard')} style={{ padding: '12px 22px', background: 'linear-gradient(45deg,#FF4FA3,#A855F7)', border: 'none', borderRadius: 10, color: 'white', fontWeight: 600, cursor: 'pointer' }}>Go to Mentor Dashboard</button>
                     </div>
                 )}
 
-                {application?.status === 'pending' && (
+                {!isMentor && application?.status === 'pending' && (
                     <div style={card}>
                         <h3 style={{ marginBottom: 10, color: '#f5a623' }}>Application under review</h3>
                         <p style={{ color: '#ccc', fontSize: 14 }}>Thanks for applying! We'll review what you shared and let your account know once it's decided. No need to resubmit.</p>
                     </div>
                 )}
 
-                {application?.status === 'rejected' && (
+                {!isMentor && application?.status === 'rejected' && (
                     <>
                         <div style={{ ...card, marginBottom: 18, borderColor: 'rgba(255,77,77,0.3)' }}>
                             <p style={{ color: '#ff8080', fontSize: 14 }}>Your last application wasn't approved. You're welcome to submit a new one below.</p>
@@ -99,7 +103,7 @@ export default function BecomeMentor() {
                     </>
                 )}
 
-                {!application && (
+                {!isMentor && !application && (
                     <ApplicationForm {...{ card, input, motivation, setMotivation, skills, setSkills, experience, setExperience, error, submit, submitting }} />
                 )}
             </div>

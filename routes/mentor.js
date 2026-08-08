@@ -70,4 +70,25 @@ router.get("/profile/:userId", async (req, res) => {
     }
 });
 
+// GET /api/mentor/students - people actually enrolled in MY courses (not every learner on the platform)
+router.get("/students", verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `SELECT u.id, u.name, u.email, u.username, u.created_at AS member_since,
+                    json_agg(json_build_object('course_id', c.id, 'course_title', c.title, 'enrolled_at', e.enrolled_at) ORDER BY e.enrolled_at DESC) AS enrollments
+             FROM enrollments e
+             JOIN courses c ON c.id = e.course_id
+             JOIN users u ON u.id = e.student_id
+             WHERE c.mentor_id = $1
+             GROUP BY u.id
+             ORDER BY MAX(e.enrolled_at) DESC`,
+            [req.user.id]
+        );
+        res.json({ success: true, students: result.rows });
+    } catch (err) {
+        console.error("List students error:", err);
+        res.status(500).json({ success: false, message: "Could not load students.", students: [] });
+    }
+});
+
 module.exports = router;

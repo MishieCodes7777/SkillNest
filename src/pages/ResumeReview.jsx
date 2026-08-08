@@ -11,21 +11,38 @@ export default function ResumeReview() {
         const file = e.target.files[0];
         if (!file) return;
         if (file.size > 5 * 1024 * 1024) { alert('Max 5MB'); return; }
+        // Plain-text reading only extracts real content from .txt — PDF/DOCX
+        // are binary formats and need a real parser, which isn't wired up yet.
+        if (!file.name.toLowerCase().endsWith('.txt')) {
+            alert('For accurate feedback, please upload a .txt file for now — PDF/DOCX parsing isn\'t supported yet.');
+            return;
+        }
         setFileName(file.name);
         const reader = new FileReader();
         reader.onload = (ev) => { analyze(ev.target.result); };
         reader.readAsText(file);
     }
 
-    function analyze(content) {
+    async function analyze(content) {
         setStep('loading');
-        setTimeout(() => {
-            const t = content.toLowerCase().replace(/[^\x20-\x7E\n\r]/g, ' ');
-            const fb = performAnalysis(t);
-            setFeedback(fb);
-            setStep('results');
-            const d = getUserData(); d.activity.unshift({ text: `Reviewed resume (Score: ${fb.score}/100)`, time: 'Just now' }); saveUserData(d);
-        }, 2000);
+        const cleaned = content.replace(/[^\x20-\x7E\n\r]/g, ' ');
+        let fb;
+        try {
+            const res = await fetch('/api/ai/resume-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+                body: JSON.stringify({ resumeText: cleaned }),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message);
+            fb = data.feedback;
+        } catch (e) {
+            // AI unavailable — fall back to keyword-based scoring rather than a dead end
+            fb = performAnalysis(cleaned.toLowerCase());
+        }
+        setFeedback(fb);
+        setStep('results');
+        const d = getUserData(); d.activity.unshift({ text: `Reviewed resume (Score: ${fb.score}/100)`, time: 'Just now' }); saveUserData(d);
     }
 
     function performAnalysis(t) {
@@ -54,9 +71,9 @@ export default function ResumeReview() {
                     <div onClick={() => document.getElementById('fileInput').click()} style={{ background: 'rgba(255,255,255,0.03)', border: '2px dashed rgba(168,85,247,0.3)', borderRadius: 16, padding: 50, textAlign: 'center', cursor: 'pointer' }}>
                         <span className="material-icons" style={{ fontSize: 48, color: '#A855F7', marginBottom: 15 }}>cloud_upload</span>
                         <h3 style={{ marginBottom: 8 }}>Drop your resume here</h3>
-                        <p style={{ color: '#8892b0', fontSize: 14 }}>PDF, DOC, DOCX — max 5MB</p>
+                        <p style={{ color: '#8892b0', fontSize: 14 }}>.txt files — max 5MB (PDF/DOCX parsing coming soon)</p>
                         {fileName && <p style={{ color: '#34c759', marginTop: 10, fontSize: 13 }}>{fileName}</p>}
-                        <input id="fileInput" type="file" accept=".pdf,.doc,.docx" onChange={handleFile} style={{ display: 'none' }} />
+                        <input id="fileInput" type="file" accept=".txt" onChange={handleFile} style={{ display: 'none' }} />
                     </div>
                 )}
 

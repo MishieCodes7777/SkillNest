@@ -1,52 +1,94 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AppLayout from '../components/AppLayout';
-import { getCurrentUser, getUserEmail, getUserData, saveUserData } from '../utils/auth';
+import { getCurrentUser } from '../utils/auth';
 import '../styles/messages.css';
 
-export default function Messages() {
-    const email = getUserEmail();
-    const msgKey = 'skillnest_msgs_' + email;
-    const connKey = 'skillnest_conns_' + email;
+function authHeaders(extra) {
+    return { 'Authorization': 'Bearer ' + localStorage.getItem('token'), ...extra };
+}
 
+function timeAgo(dateStr) {
+    if (!dateStr) return '';
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 60) return 'now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+    return Math.floor(diff / 86400) + 'd';
+}
+
+export default function Messages() {
+    const me = getCurrentUser();
     const [tab, setTab] = useState('chats');
     const [search, setSearch] = useState('');
     const [allUsers, setAllUsers] = useState([]);
-    const [connections, setConnections] = useState(JSON.parse(localStorage.getItem(connKey) || '[]'));
-    const [messages, setMessages] = useState(JSON.parse(localStorage.getItem(msgKey) || '{}'));
+    const [conversations, setConversations] = useState([]);
+    const [connections, setConnections] = useState([]);
     const [currentChat, setCurrentChat] = useState(null);
+    const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
-    const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteLink, setInviteLink] = useState('');
     const chatRef = useRef();
-    const me = getCurrentUser()?.name || 'You';
 
-    useEffect(() => { fetch('/api/auth/users').then(r => r.json()).then(d => setAllUsers((d.users || []).filter(u => u.name !== me))).catch(() => { }); }, []);
-    useEffect(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, [messages, currentChat]);
+    useEffect(() => { loadAll(); }, []);
+    useEffect(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, [messages]);
 
-    function saveConns(c) { setConnections(c); localStorage.setItem(connKey, JSON.stringify(c)); }
-    function saveMsgs(m) { setMessages(m); localStorage.setItem(msgKey, JSON.stringify(m)); }
-
-    function connectUser(name) {
-        if (!connections.includes(name)) { const c = [...connections, name]; saveConns(c); }
-        const d = getUserData(); d.mentors = (d.mentors || 0) + 1; d.activity.unshift({ text: 'Connected with ' + name, time: 'Just now' }); saveUserData(d);
+    function loadAll() {
+        fetch('/api/auth/users', { headers: authHeaders() }).then(r => r.json())
+            .then(d => { if (d.success) setAllUsers((d.users || []).filter(u => String(u.id) !== String(me?.id))); }).catch(() => { });
+        fetch('/api/messages', { headers: authHeaders() }).then(r => r.json())
+            .then(d => { if (d.success) setConversations(d.conversations); }).catch(() => { });
+        fetch('/api/connections', { headers: authHeaders() }).then(r => r.json())
+            .then(d => { if (d.success) setConnections(d.connections); }).catch(() => { });
     }
 
-    function sendMsg() {
+    function openChat(user) {
+        setCurrentChat(user);
+        fetch(`/api/messages/${user.id}`, { headers: authHeaders() }).then(r => r.json())
+            .then(d => { if (d.success) setMessages(d.messages); })
+            .catch(() => setMessages([]));
+    }
+
+    async function sendMsg() {
         if (!input.trim() || !currentChat) return;
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const updated = { ...messages, [currentChat]: [...(messages[currentChat] || []), { from: 'me', text: input.trim(), time }] };
-        saveMsgs(updated);
+        const text = input.trim();
         setInput('');
+        try {
+            const res = await fetch(`/api/messages/${currentChat.id}`, {
+                method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ content: text }),
+            });
+            const data = await res.json();
+            if (data.success) { setMessages(prev => [...prev, data.message]); loadAll(); }
+            else alert(data.message || 'Could not send message.');
+        } catch (e) { alert('Could not connect to the server.'); }
     }
 
-    function generateInvite() {
-        if (!inviteEmail.includes('@')) { alert('Enter valid email'); return; }
-        const code = Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
-        setInviteLink(window.location.origin + '/signup?ref=' + code);
+    async function sendRequest(userId) {
+        try {
+            const res = await fetch('/api/connections/request', {
+                method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ toUserId: userId }),
+            });
+            const data = await res.json();
+            if (data.success) loadAll(); else alert(data.message);
+        } catch (e) { }
     }
 
-    const filtered = tab === 'chats' ? connections.filter(c => c.toLowerCase().includes(search.toLowerCase())) :
-        allUsers.filter(u => u.name.toLowerCase().includes(search.toLowerCase()));
+    async function respond(connId, action) {
+        try {
+            await fetch(`/api/connections/${connId}/${action}`, { method: 'POST', headers: authHeaders() });
+            loadAll();
+        } catch (e) { }
+    }
+
+    function connectionState(userId) {
+        return connections.find(c => String(c.user_id) === String(userId));
+    }
+
+    const incomingRequests = connections.filter(c => c.direction === 'incoming' && c.status === 'pending');
+    const acceptedIds = new Set(connections.filter(c => c.status === 'accepted').map(c => String(c.user_id)));
+
+    const chatsFiltered = conversations.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+    const findFiltered = allUsers
+        .filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
+        .filter(u => !acceptedIds.has(String(u.id)));
 
     return (
         <AppLayout>
@@ -56,37 +98,56 @@ export default function Messages() {
                         <h2>Messages</h2>
                         <div className="msg-tabs">
                             <button className={tab === 'chats' ? 'active' : ''} onClick={() => setTab('chats')}>Chats</button>
-                            <button className={tab === 'search' ? 'active' : ''} onClick={() => setTab('search')}>Find People</button>
-                            <button className={tab === 'invite' ? 'active' : ''} onClick={() => setTab('invite')}>Invite</button>
+                            <button className={tab === 'requests' ? 'active' : ''} onClick={() => setTab('requests')}>
+                                Requests{incomingRequests.length > 0 ? ` (${incomingRequests.length})` : ''}
+                            </button>
+                            <button className={tab === 'find' ? 'active' : ''} onClick={() => setTab('find')}>Find People</button>
                         </div>
-                        {tab !== 'invite' && <input className="msg-search" value={search} onChange={e => setSearch(e.target.value)} placeholder={tab === 'chats' ? 'Search chats...' : 'Search by name...'} />}
+                        {tab !== 'requests' && <input className="msg-search" value={search} onChange={e => setSearch(e.target.value)} placeholder={tab === 'chats' ? 'Search chats...' : 'Search by name...'} />}
                     </div>
                     <div className="msg-list">
-                        {tab === 'invite' ? (
-                            <div className="invite-panel">
-                                <h4>Invite a Friend</h4>
-                                <p>Generate a unique signup link</p>
-                                <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="Friend's email" />
-                                <button className="invite-btn" onClick={generateInvite}>Generate Link</button>
-                                {inviteLink && <input className="invite-link" value={inviteLink} readOnly onClick={e => { e.target.select(); navigator.clipboard.writeText(inviteLink); }} />}
-                            </div>
-                        ) : tab === 'chats' ? (
-                            filtered.length === 0 ? <div className="msg-empty">No conversations. Find people to connect!</div> :
-                                filtered.map(name => (
-                                    <div key={name} className={`contact-item ${currentChat === name ? 'active' : ''}`} onClick={() => setCurrentChat(name)}>
-                                        <div className="c-av">{name.charAt(0).toUpperCase()}</div>
-                                        <div className="c-info"><h4>{name}</h4><p>{(messages[name] || []).slice(-1)[0]?.text || 'No messages'}</p></div>
+                        {tab === 'chats' && (
+                            chatsFiltered.length === 0 ? <div className="msg-empty">No conversations yet. Connect with people in "Find People" to start chatting.</div> :
+                                chatsFiltered.map(c => (
+                                    <div key={c.user_id} className={`contact-item ${currentChat?.id === c.user_id ? 'active' : ''}`} onClick={() => openChat({ id: c.user_id, name: c.name })}>
+                                        <div className="c-av">{c.name.charAt(0).toUpperCase()}</div>
+                                        <div className="c-info"><h4>{c.name}</h4><p>{c.last_message || 'Say hello!'}</p></div>
+                                        {c.unread_count > 0 && <span className="msg-badge">{c.unread_count}</span>}
                                     </div>
                                 ))
-                        ) : (
-                            filtered.length === 0 ? <div className="msg-empty">No users found</div> :
-                                filtered.map(u => (
-                                    <div key={u.email} className="user-card">
-                                        <div className="c-av">{u.name.charAt(0).toUpperCase()}</div>
-                                        <div className="c-info"><h4>{u.name}</h4><p>{u.role}</p></div>
-                                        <button className={`conn-btn ${connections.includes(u.name) ? 'connected' : ''}`} onClick={() => connectUser(u.name)}>{connections.includes(u.name) ? 'Connected' : 'Connect'}</button>
+                        )}
+
+                        {tab === 'requests' && (
+                            incomingRequests.length === 0 ? <div className="msg-empty">No pending requests.</div> :
+                                incomingRequests.map(r => (
+                                    <div className="req-item" key={r.id}>
+                                        <div className="c-av">{r.name.charAt(0).toUpperCase()}</div>
+                                        <div className="c-info"><h4>{r.name}</h4><p>Wants to connect</p></div>
+                                        <div className="req-actions">
+                                            <button className="req-accept" onClick={() => respond(r.id, 'accept')}><span className="material-icons">check</span></button>
+                                            <button className="req-reject" onClick={() => respond(r.id, 'reject')}><span className="material-icons">close</span></button>
+                                        </div>
                                     </div>
                                 ))
+                        )}
+
+                        {tab === 'find' && (
+                            findFiltered.length === 0 ? <div className="msg-empty">No one found.</div> :
+                                findFiltered.map(u => {
+                                    const conn = connectionState(u.id);
+                                    let btn;
+                                    if (!conn) btn = <button className="conn-btn" onClick={() => sendRequest(u.id)}>Connect</button>;
+                                    else if (conn.status === 'pending' && conn.direction === 'outgoing') btn = <button className="conn-btn pending" disabled>Requested</button>;
+                                    else if (conn.status === 'pending' && conn.direction === 'incoming') btn = <button className="conn-btn" onClick={() => setTab('requests')}>Respond</button>;
+                                    else if (conn.status === 'rejected') btn = <button className="conn-btn" onClick={() => sendRequest(u.id)}>Connect</button>;
+                                    return (
+                                        <div className="user-card" key={u.id}>
+                                            <div className="c-av">{u.name.charAt(0).toUpperCase()}</div>
+                                            <div className="c-info"><h4>{u.name}</h4><p>{u.role}</p></div>
+                                            {btn}
+                                        </div>
+                                    );
+                                })
                         )}
                     </div>
                 </div>
@@ -95,11 +156,14 @@ export default function Messages() {
                         <div className="msg-empty-chat"><span className="material-icons">chat_bubble_outline</span><p>Select a conversation</p></div>
                     ) : (
                         <>
-                            <div className="msg-chat-header"><div className="c-av">{currentChat.charAt(0).toUpperCase()}</div><h3>{currentChat}</h3></div>
+                            <div className="msg-chat-header"><div className="c-av">{currentChat.name.charAt(0).toUpperCase()}</div><h3>{currentChat.name}</h3></div>
                             <div className="msg-chat-area" ref={chatRef}>
-                                {(messages[currentChat] || []).length === 0 ? <div className="msg-empty" style={{ paddingTop: '40px' }}>No messages yet. Say hello!</div> :
-                                    (messages[currentChat] || []).map((m, i) => (
-                                        <div key={i} className={`bubble ${m.from === 'me' ? 'sent' : 'received'}`}>{m.text}<span className="bubble-time">{m.time}</span></div>
+                                {messages.length === 0 ? <div className="msg-empty" style={{ paddingTop: '40px' }}>No messages yet. Say hello!</div> :
+                                    messages.map(m => (
+                                        <div key={m.id} className={`bubble ${String(m.sender_id) === String(me?.id) ? 'sent' : 'received'}`}>
+                                            {m.content}
+                                            <span className="bubble-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </div>
                                     ))}
                             </div>
                             <div className="msg-input-area">

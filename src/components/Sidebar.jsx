@@ -10,26 +10,35 @@ const navItems = [
     { path: '/messages', icon: 'chat', label: 'Messages' },
     { path: '/community', icon: 'groups', label: 'Community' },
     { path: '/courses', icon: 'school', label: 'Courses' },
+    { path: '/achievements', icon: 'military_tech', label: 'Achievements' },
     { path: '/profile', icon: 'person', label: 'Profile' },
 ];
 
+// Grouped separately because these are the features that actually call an
+// AI model — keeping the label honest, and keeping the main list short.
 const aiItems = [
     { path: '/ai-mentor', icon: 'smart_toy', label: 'AI Mentor' },
     { path: '/ai-roadmap', icon: 'map', label: 'AI Roadmap' },
     { path: '/arena', icon: 'emoji_events', label: 'Skill Arena' },
     { path: '/interview', icon: 'psychology', label: 'Interview Prep' },
     { path: '/resume-review', icon: 'description', label: 'Resume Review' },
-    { path: '/achievements', icon: 'military_tech', label: 'Achievements' },
 ];
 
-// Add mentor link if user is a mentor
 const mentorLink = { path: '/mentor/dashboard', icon: 'swap_horiz', label: 'Mentor Portal' };
 
 export default function Sidebar() {
     const [open, setOpen] = useState(false);
+    const [aiOpen, setAiOpen] = useState(localStorage.getItem('skillnest_ai_nav_open') !== 'false');
     const location = useLocation();
     const user = getCurrentUser();
     const isMentor = user?.role === 'mentor' || (user?.roles && user.roles.includes('mentor'));
+    const aiSectionActive = aiItems.some(i => i.path === location.pathname);
+
+    function toggleAi() {
+        const next = !aiOpen;
+        setAiOpen(next);
+        localStorage.setItem('skillnest_ai_nav_open', String(next));
+    }
 
     function handleLogout() {
         logout();
@@ -65,8 +74,12 @@ export default function Sidebar() {
 
                 <div className="sn-nav-divider" />
 
-                {aiItems.map(item => (
-                    <Link key={item.path} to={item.path} className={`sn-nav-item ${location.pathname === item.path ? 'active' : ''}`} onClick={() => setOpen(false)}>
+                <button className={`sn-nav-group-toggle ${aiSectionActive ? 'active' : ''}`} onClick={toggleAi}>
+                    <span className="sn-nav-group-label"><span className="material-icons">auto_awesome</span> AI Tools</span>
+                    <span className={`material-icons sn-chevron ${aiOpen ? 'open' : ''}`}>expand_more</span>
+                </button>
+                {aiOpen && aiItems.map(item => (
+                    <Link key={item.path} to={item.path} className={`sn-nav-item sn-nav-item-sub ${location.pathname === item.path ? 'active' : ''}`} onClick={() => setOpen(false)}>
                         <span className="material-icons">{item.icon}</span> {item.label}
                     </Link>
                 ))}

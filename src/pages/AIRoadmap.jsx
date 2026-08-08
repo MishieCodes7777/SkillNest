@@ -16,18 +16,29 @@ export default function AIRoadmap() {
 
     useEffect(() => { if (history.length > 0) { setRoadmap(history[0]); setStep('result'); } }, []);
 
-    function generate() {
+    async function generate() {
         if (!skills || !goal) { alert('Fill in your skills and goal'); return; }
         setStep('loading');
-        setTimeout(() => {
-            const weeks = createRoadmap(skills.toLowerCase(), goal.toLowerCase(), hours);
-            const entry = { id: Date.now(), skills, goal, hours, weeks, date: new Date().toLocaleDateString() };
-            const updated = [entry, ...history].slice(0, 10);
-            localStorage.setItem(histKey, JSON.stringify(updated));
-            setHistory(updated);
-            setRoadmap(entry);
-            setStep('result');
-        }, 2000);
+        let weeks;
+        try {
+            const res = await fetch('/api/ai/roadmap', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+                body: JSON.stringify({ skills, goal, hours }),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message);
+            weeks = data.weeks;
+        } catch (e) {
+            // AI unavailable — fall back to the rule-based generator rather than a dead end
+            weeks = createRoadmap(skills.toLowerCase(), goal.toLowerCase(), hours);
+        }
+        const entry = { id: Date.now(), skills, goal, hours, weeks, date: new Date().toLocaleDateString() };
+        const updated = [entry, ...history].slice(0, 10);
+        localStorage.setItem(histKey, JSON.stringify(updated));
+        setHistory(updated);
+        setRoadmap(entry);
+        setStep('result');
     }
 
     function toggleTask(weekIdx, dayIdx) {

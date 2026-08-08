@@ -6,11 +6,25 @@ const { verifyToken } = require("../middleware/auth");
 // GET /api/courses - Get all courses (public)
 router.get("/", async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM courses ORDER BY created_at DESC");
+        const result = await pool.query(
+            `SELECT c.*, COUNT(e.id)::int AS enrolled_count
+             FROM courses c LEFT JOIN enrollments e ON e.course_id = c.id
+             GROUP BY c.id ORDER BY c.created_at DESC`
+        );
         res.json({ success: true, courses: result.rows });
     } catch (err) {
         console.error("List courses error:", err);
         res.status(500).json({ success: false, message: "Could not load courses.", courses: [] });
+    }
+});
+
+// GET /api/courses/my-enrollments - course ids I'm enrolled in (for UI state)
+router.get("/my-enrollments", verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT course_id FROM enrollments WHERE student_id = $1", [req.user.id]);
+        res.json({ success: true, courseIds: result.rows.map(r => r.course_id) });
+    } catch (err) {
+        res.status(500).json({ success: false, courseIds: [] });
     }
 });
 
@@ -39,6 +53,36 @@ router.post("/", verifyToken, async (req, res) => {
     } catch (err) {
         console.error("Create course error:", err);
         res.status(500).json({ success: false, message: "Could not create course" });
+    }
+});
+
+// POST /api/courses/:id/enroll
+router.post("/:id/enroll", verifyToken, async (req, res) => {
+    try {
+        const course = await pool.query("SELECT id, mentor_id FROM courses WHERE id = $1", [req.params.id]);
+        if (course.rows.length === 0) return res.status(404).json({ success: false, message: "Course not found." });
+        if (String(course.rows[0].mentor_id) === String(req.user.id)) {
+            return res.status(400).json({ success: false, message: "You can't enroll in your own course." });
+        }
+
+        await pool.query(
+            "INSERT INTO enrollments (course_id, student_id) VALUES ($1, $2) ON CONFLICT (course_id, student_id) DO NOTHING",
+            [req.params.id, req.user.id]
+        );
+        res.status(201).json({ success: true, message: "Enrolled!" });
+    } catch (err) {
+        console.error("Enroll error:", err);
+        res.status(500).json({ success: false, message: "Could not enroll." });
+    }
+});
+
+// DELETE /api/courses/:id/enroll - unenroll
+router.delete("/:id/enroll", verifyToken, async (req, res) => {
+    try {
+        await pool.query("DELETE FROM enrollments WHERE course_id = $1 AND student_id = $2", [req.params.id, req.user.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: "Could not unenroll." });
     }
 });
 

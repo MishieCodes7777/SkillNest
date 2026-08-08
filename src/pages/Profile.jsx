@@ -9,6 +9,14 @@ export default function Profile() {
     const data = getUserData();
     const [editOpen, setEditOpen] = useState(false);
     const [usernameModal, setUsernameModal] = useState(false);
+    const [passwordModal, setPasswordModal] = useState(false);
+    const [currentPw, setCurrentPw] = useState('');
+    const [newPw, setNewPw] = useState('');
+    const [confirmPw, setConfirmPw] = useState('');
+    const [showPw, setShowPw] = useState(false);
+    const [pwError, setPwError] = useState('');
+    const [pwSuccess, setPwSuccess] = useState('');
+    const [pwSaving, setPwSaving] = useState(false);
     const [newName, setNewName] = useState(user?.name || '');
     const [newUsername, setNewUsername] = useState(user?.username || '');
     const [usernameStatus, setUsernameStatus] = useState('');
@@ -74,6 +82,27 @@ export default function Profile() {
         reader.readAsDataURL(file);
     }
 
+    async function changePassword() {
+        setPwError(''); setPwSuccess('');
+        if (newPw.length < 6 || !/\d/.test(newPw)) { setPwError('New password must be at least 6 characters and contain a number.'); return; }
+        if (newPw !== confirmPw) { setPwError('New passwords do not match.'); return; }
+        setPwSaving(true);
+        try {
+            const res = await fetch('/api/auth/change-password', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+                body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setPwSuccess('Password updated!');
+                setCurrentPw(''); setNewPw(''); setConfirmPw('');
+                setTimeout(() => { setPasswordModal(false); setPwSuccess(''); }, 1500);
+            } else { setPwError(data.message || 'Could not update password.'); }
+        } catch (e) { setPwError('Could not connect to the server.'); }
+        setPwSaving(false);
+    }
+
     function saveProfile() {
         if (newName.trim()) {
             const u = { ...user, name: newName.trim() };
@@ -102,6 +131,7 @@ export default function Profile() {
                     <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <button className="edit-btn" onClick={() => setEditOpen(true)}><span className="material-icons">edit</span> Edit</button>
                         <button className="edit-btn" onClick={() => setUsernameModal(true)} style={{ borderColor: '#A855F7', color: '#A855F7' }}><span className="material-icons">alternate_email</span> {hasUsername ? 'Change' : 'Set'} Username</button>
+                        <button className="edit-btn" onClick={() => setPasswordModal(true)}><span className="material-icons">lock</span> Change Password</button>
                     </div>
                 </div>
 
@@ -164,6 +194,38 @@ export default function Profile() {
                                 <div className="modal-actions">
                                     <button className="m-cancel" onClick={() => setUsernameModal(false)}>Cancel</button>
                                     <button className="m-save" onClick={saveUsername} disabled={newUsername.length < 3 || !!usernameError}>Save Username</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Change Password Modal */}
+                {passwordModal && (
+                    <div className="modal-overlay" onClick={() => setPasswordModal(false)}>
+                        <div className="modal" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header"><h3>Change Password</h3><button onClick={() => setPasswordModal(false)} className="modal-close"><span className="material-icons">close</span></button></div>
+                            <div className="modal-body">
+                                <div className="modal-input" style={{ position: 'relative' }}>
+                                    <label>Current Password</label>
+                                    <input type={showPw ? 'text' : 'password'} value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="Enter your current password" style={{ paddingRight: 40 }} />
+                                </div>
+                                <div className="modal-input" style={{ position: 'relative' }}>
+                                    <label>New Password</label>
+                                    <input type={showPw ? 'text' : 'password'} value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="Min 6 chars, must include a number" style={{ paddingRight: 40 }} />
+                                </div>
+                                <div className="modal-input" style={{ position: 'relative', marginBottom: 6 }}>
+                                    <label>Confirm New Password</label>
+                                    <input type={showPw ? 'text' : 'password'} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="Re-enter the new password" style={{ paddingRight: 40 }} />
+                                </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#8892b0', marginBottom: 15, cursor: 'pointer' }}>
+                                    <input type="checkbox" checked={showPw} onChange={e => setShowPw(e.target.checked)} /> Show passwords
+                                </label>
+                                {pwError && <p style={{ color: '#ff8080', fontSize: 12.5, marginBottom: 10 }}>{pwError}</p>}
+                                {pwSuccess && <p style={{ color: '#34c759', fontSize: 12.5, marginBottom: 10 }}>{pwSuccess}</p>}
+                                <div className="modal-actions">
+                                    <button className="m-cancel" onClick={() => setPasswordModal(false)}>Cancel</button>
+                                    <button className="m-save" onClick={changePassword} disabled={pwSaving || !currentPw || !newPw || !confirmPw}>{pwSaving ? 'Saving...' : 'Update Password'}</button>
                                 </div>
                             </div>
                         </div>

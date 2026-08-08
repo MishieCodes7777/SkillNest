@@ -172,6 +172,50 @@ async function initDatabase() {
         `);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id, created_at DESC)`);
         console.log("✅ Notifications table ready");
+
+        // Real messaging: connection requests must be accepted before a chat
+        // exists, and messages persist server-side (not per-browser localStorage).
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS connections (
+                id SERIAL PRIMARY KEY,
+                requester_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                responded_at TIMESTAMP
+            )
+        `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_connections_requester ON connections(requester_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_connections_recipient ON connections(recipient_id)`);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY,
+                sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                recipient_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                content TEXT NOT NULL,
+                is_read BOOLEAN DEFAULT false,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_messages_pair ON messages(sender_id, recipient_id, created_at)`);
+        console.log("✅ Connections & Messages tables ready");
+
+        // Enrollments — a mentor's "Students" list should be people who
+        // actually enrolled in one of their courses, not every learner on
+        // the platform (which is what it showed before this table existed).
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS enrollments (
+                id SERIAL PRIMARY KEY,
+                course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+                student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(course_id, student_id)
+            )
+        `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course_id)`);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_enrollments_student ON enrollments(student_id)`);
+        console.log("✅ Enrollments table ready");
     } catch (err) {
         console.error("❌ Error creating table:", err.message);
     }

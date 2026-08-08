@@ -21,6 +21,9 @@ const ICONS = {
     mentor_approved: 'verified',
     mentor_rejected: 'info',
     session_invite: 'videocam',
+    connection_request: 'person_add',
+    connection_accepted: 'how_to_reg',
+    new_message: 'mail',
 };
 
 export default function TopBar() {

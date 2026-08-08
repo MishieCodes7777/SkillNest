@@ -6,6 +6,7 @@ import { getCurrentUser } from '../../utils/auth';
 export default function MentorDashboard() {
     const user = getCurrentUser();
     const [courses, setCourses] = useState([]);
+    const [studentCount, setStudentCount] = useState(0);
     const hour = new Date().getHours();
     const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
@@ -13,6 +14,8 @@ export default function MentorDashboard() {
         fetch('/api/courses').then(r => r.json()).then(d => {
             if (d.success) setCourses(d.courses.filter(c => c.mentor_id === user?.id));
         }).catch(() => { });
+        fetch('/api/mentor/students', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } }).then(r => r.json())
+            .then(d => { if (d.success) setStudentCount(d.students.length); }).catch(() => { });
     }, []);
 
     return (
@@ -22,7 +25,7 @@ export default function MentorDashboard() {
 
             <div className="m-stats">
                 <div className="m-stat"><div className="ms-val">{courses.length}</div><div className="ms-label">Courses Created</div></div>
-                <div className="m-stat"><div className="ms-val">0</div><div className="ms-label">Total Students</div></div>
+                <div className="m-stat"><div className="ms-val">{studentCount}</div><div className="ms-label">Total Students</div></div>
                 <div className="m-stat"><div className="ms-val">0</div><div className="ms-label">Sessions This Week</div></div>
                 <div className="m-stat"><div className="ms-val">0</div><div className="ms-label">Earnings</div></div>
             </div>

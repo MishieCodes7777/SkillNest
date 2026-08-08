@@ -73,4 +73,87 @@ router.post("/chat", verifyToken, async (req, res) => {
     }
 });
 
+// Pulls the first JSON array or object out of a model response that may
+// include stray prose around it, since models don't always obey "JSON only."
+function extractJson(text) {
+    const arrStart = text.indexOf('['), arrEnd = text.lastIndexOf(']');
+    const objStart = text.indexOf('{'), objEnd = text.lastIndexOf('}');
+    const useArray = arrStart !== -1 && arrEnd > arrStart && (objStart === -1 || arrStart < objStart);
+    const start = useArray ? arrStart : objStart;
+    const end = useArray ? arrEnd : objEnd;
+    if (start === -1 || end <= start) throw new Error("No JSON found in AI response");
+    return JSON.parse(text.substring(start, end + 1));
+}
+
+// POST /api/ai/roadmap - Generate a real, personalized learning roadmap
+router.post("/roadmap", verifyToken, async (req, res) => {
+    try {
+        const { skills, goal, hours } = req.body;
+        if (!goal) return res.status(400).json({ success: false, message: "Goal is required" });
+
+        const prompt = `You are a curriculum designer. A learner currently knows: "${skills || 'nothing specific yet'}". Their goal is: "${goal}". They can study ${hours || 10} hours per week.
+
+Design a week-by-week learning roadmap (4-8 weeks, however many genuinely makes sense for this goal — don't pad it). For each week return:
+- "week": the week number
+- "title": short title for the week's focus
+- "desc": one sentence describing what they'll learn
+- "topics": an array of exactly 5 short topic/skill strings covered that week
+- "hours": ${hours || 10}
+
+Skip any topics the learner says they already know. Return ONLY a JSON array like:
+[{"week":1,"title":"...","desc":"...","topics":["...","...","...","...","..."],"hours":${hours || 10}}]
+No other text before or after the JSON.`;
+
+        const completion = await groq.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "llama-3.1-8b-instant",
+            temperature: 0.6,
+            max_tokens: 2000,
+        });
+
+        const raw = completion.choices[0]?.message?.content || "";
+        const weeks = extractJson(raw);
+        if (!Array.isArray(weeks) || weeks.length === 0) throw new Error("Empty roadmap");
+        res.json({ success: true, weeks });
+    } catch (err) {
+        console.error("AI roadmap error:", err.message);
+        res.status(500).json({ success: false, message: "Could not generate a roadmap right now. Try again." });
+    }
+});
+
+// POST /api/ai/resume-review - Real AI resume feedback (replaces keyword-matching)
+router.post("/resume-review", verifyToken, async (req, res) => {
+    try {
+        const { resumeText } = req.body;
+        if (!resumeText || resumeText.trim().length < 40) {
+            return res.status(400).json({ success: false, message: "Resume text is too short to review." });
+        }
+
+        const prompt = `You are an experienced technical recruiter reviewing this resume. Give honest, specific, actionable feedback — not generic advice.
+
+Resume:
+"""
+${resumeText.slice(0, 6000)}
+"""
+
+Return ONLY this JSON object, nothing else:
+{"score": <0-100 integer>, "critical": [<up to 4 strings — serious gaps that would hurt them in screening>], "improvements": [<up to 5 strings — specific, actionable suggestions>], "strengths": [<up to 5 strings — what's genuinely working>]}`;
+
+        const completion = await groq.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "llama-3.1-8b-instant",
+            temperature: 0.4,
+            max_tokens: 1200,
+        });
+
+        const raw = completion.choices[0]?.message?.content || "";
+        const feedback = extractJson(raw);
+        if (typeof feedback.score !== 'number') throw new Error("Malformed feedback");
+        res.json({ success: true, feedback: { score: Math.max(0, Math.min(100, Math.round(feedback.score))), critical: feedback.critical || [], improvements: feedback.improvements || [], strengths: feedback.strengths || [] } });
+    } catch (err) {
+        console.error("AI resume review error:", err.message);
+        res.status(500).json({ success: false, message: "Could not analyze the resume right now. Try again." });
+    }
+});
+
 module.exports = router;

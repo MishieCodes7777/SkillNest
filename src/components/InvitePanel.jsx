@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { getCurrentUser, getUserEmail } from '../utils/auth';
+import React, { useState, useEffect } from 'react';
+import { getCurrentUser } from '../utils/auth';
 import '../styles/invite.css';
 
 function authHeaders(extra) {
@@ -9,26 +9,26 @@ function authHeaders(extra) {
 export default function InvitePanel({ meetCode }) {
     const me = getCurrentUser();
     const [users, setUsers] = useState([]);
+    const [connectedIds, setConnectedIds] = useState(new Set());
     const [search, setSearch] = useState('');
     const [invited, setInvited] = useState([]);
     const [copied, setCopied] = useState(false);
     const shareLink = `${window.location.origin}/meeting?meet=${meetCode}`;
 
-    const pastConnections = useMemo(() => {
-        try { return JSON.parse(localStorage.getItem('skillnest_conns_' + getUserEmail()) || '[]'); } catch (e) { return []; }
-    }, []);
-
     useEffect(() => {
         fetch('/api/auth/users', { headers: authHeaders() }).then(r => r.json())
             .then(d => { if (d.success) setUsers((d.users || []).filter(u => String(u.id) !== String(me?.id))); })
+            .catch(() => { });
+        fetch('/api/connections', { headers: authHeaders() }).then(r => r.json())
+            .then(d => { if (d.success) setConnectedIds(new Set(d.connections.filter(c => c.status === 'accepted').map(c => String(c.user_id)))); })
             .catch(() => { });
     }, []);
 
     const filtered = users
         .filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
         .sort((a, b) => {
-            const aConn = pastConnections.includes(a.name) ? 0 : 1;
-            const bConn = pastConnections.includes(b.name) ? 0 : 1;
+            const aConn = connectedIds.has(String(a.id)) ? 0 : 1;
+            const bConn = connectedIds.has(String(b.id)) ? 0 : 1;
             return aConn - bConn;
         });
 
@@ -59,7 +59,7 @@ export default function InvitePanel({ meetCode }) {
             <div className="ip-list">
                 {filtered.length === 0 && <div className="ip-empty">No one found.</div>}
                 {filtered.map(u => {
-                    const isSuggested = pastConnections.includes(u.name);
+                    const isSuggested = connectedIds.has(String(u.id));
                     const isInvited = invited.includes(u.id);
                     return (
                         <div className="ip-row" key={u.id}>

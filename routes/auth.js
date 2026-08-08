@@ -19,6 +19,35 @@ router.get("/me", verifyToken, getMe);
 // GET /api/auth/verify - Check if token is valid (for page protection)
 router.get("/verify", verifyToken, verifyAuth);
 
+// PUT /api/auth/change-password - change your own password while logged in
+router.put("/change-password", verifyToken, async (req, res) => {
+    const bcrypt = require("bcrypt");
+    const pool = require("../config/database");
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ success: false, message: "Current and new password are required." });
+    }
+    if (newPassword.length < 6 || !/\d/.test(newPassword)) {
+        return res.status(400).json({ success: false, message: "New password must be at least 6 characters and contain a number." });
+    }
+
+    try {
+        const user = await pool.query("SELECT password FROM users WHERE id = $1", [req.user.id]);
+        if (user.rows.length === 0) return res.status(404).json({ success: false, message: "User not found." });
+
+        const valid = await bcrypt.compare(currentPassword, user.rows[0].password);
+        if (!valid) return res.status(401).json({ success: false, message: "Current password is incorrect." });
+
+        const hashed = await bcrypt.hash(newPassword, 12);
+        await pool.query("UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2", [hashed, req.user.id]);
+        return res.json({ success: true, message: "Password updated." });
+    } catch (err) {
+        console.error("Change password error:", err);
+        return res.status(500).json({ success: false, message: "Could not update password." });
+    }
+});
+
 // POST /api/auth/add-role - Add a role to existing account.
 // Switching to 'learner' is instant — an existing mentor doesn't need reverification.
 // Switching to 'mentor' is NOT granted here anymore — it requires a reviewed
