@@ -8,7 +8,10 @@ import InvitePanel from '../components/InvitePanel';
 export default function MeetingRoom() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const meetId = searchParams.get('meet');
+    // Normalized here regardless of how someone arrived (typed code, shared
+    // link, hand-edited URL) so two people can never silently land in
+    // different rooms over stray whitespace or casing.
+    const meetId = (searchParams.get('meet') || '').trim().toLowerCase();
     // Identity comes from the logged-in account, never from the URL — a URL
     // param can be copy-pasted or spoofed and previously showed up as your
     // name in someone else's room (and vice versa).
@@ -22,19 +25,28 @@ export default function MeetingRoom() {
     const [timer, setTimer] = useState('00:00:00');
     const [remoteStreams, setRemoteStreams] = useState({});
     const [inviteOpen, setInviteOpen] = useState(false);
+    const [connecting, setConnecting] = useState(true);
+    const [slowConnect, setSlowConnect] = useState(false);
 
     const localVideoRef = useRef(null);
     const localStreamRef = useRef(null);
     const socketRef = useRef(null);
     const peersRef = useRef({});
     const startTimeRef = useRef(Date.now());
+    const iceServersRef = useRef([{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }]);
 
     useEffect(() => {
-        if (!isLoggedIn()) { navigate('/login'); return; }
+        // Preserve where they were trying to go — otherwise anyone who clicks a
+        // meeting link while logged out gets sent to login, signs in, and lands
+        // on their dashboard with no way back to the meeting except re-sharing.
+        if (!isLoggedIn()) { navigate('/login?redirect=' + encodeURIComponent(`/meeting?meet=${meetId}`)); return; }
         if (!meetId) { navigate('/sessions'); return; }
         init();
         const interval = setInterval(updateTimer, 1000);
-        return () => { clearInterval(interval); cleanup(); };
+        // A free-tier backend that's been idle can take 30-60s to wake up —
+        // without this, that delay looks identical to the meeting being broken.
+        const slowTimer = setTimeout(() => setSlowConnect(true), 12000);
+        return () => { clearInterval(interval); clearTimeout(slowTimer); cleanup(); };
     }, []);
 
     if (!isLoggedIn()) return null;
@@ -52,9 +64,18 @@ export default function MeetingRoom() {
             if (localVideoRef.current) localVideoRef.current.srcObject = stream;
         } catch (e) { console.warn('Camera error', e); }
 
+        // Fresh TURN credentials for this call — falls back to the default STUN-only
+        // list (already set in iceServersRef) if this fails or isn't configured.
+        try {
+            const res = await fetch('/api/turn-credentials', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
+            const data = await res.json();
+            if (data.success && Array.isArray(data.iceServers) && data.iceServers.length > 0) iceServersRef.current = data.iceServers;
+        } catch (e) { console.warn('Could not fetch TURN credentials, falling back to STUN-only', e); }
+
         const socket = io({ auth: { token: localStorage.getItem('token') } });
         socketRef.current = socket;
         socket.on('connect', () => {
+            setConnecting(false);
             socket.emit('userconnect', { meetingid: meetId });
             socket.on('all-users', users => users.forEach(u => createPeer(u.connectionId, true)));
             socket.on('user-joined', data => createPeer(data.connId, false));
@@ -62,25 +83,18 @@ export default function MeetingRoom() {
             socket.on('user-left', data => { if (peersRef.current[data.connId]) { peersRef.current[data.connId].destroy(); delete peersRef.current[data.connId]; } setRemoteStreams(prev => { const n = { ...prev }; delete n[data.connId]; return n; }); });
             socket.on('chat-message', data => setChatMsgs(prev => [...prev, data]));
         });
-        socket.on('connect_error', (err) => { setAuthError(err.message || 'Could not join the meeting.'); });
+        socket.on('connect_error', (err) => { setConnecting(false); setAuthError(err.message || 'Could not join the meeting.'); });
     }
 
     function createPeer(connId, initiator) {
         const peer = new SimplePeer({
             initiator, trickle: true, stream: localStreamRef.current,
-            config: {
-                iceServers: [
-                    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-                    // STUN alone only works when both sides can find a direct path to each
-                    // other — it fails on plenty of real networks (campus wifi, mobile data,
-                    // strict/symmetric NATs), which is exactly what "I join but never see the
-                    // other person" looks like. A TURN relay is the fallback for those cases.
-                    { urls: 'stun:openrelay.metered.ca:80' },
-                    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-                    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-                ],
-            },
+            // STUN alone only works when both sides can find a direct path to each
+            // other — it fails on plenty of real networks (campus wifi, mobile data,
+            // strict/symmetric NATs), which is exactly what "I join but never see the
+            // other person" looks like. iceServersRef holds a TURN relay fetched from
+            // the backend for that case (see init()), with STUN-only as the fallback.
+            config: { iceServers: iceServersRef.current },
         });
         peersRef.current[connId] = peer;
         peer.on('signal', signal => socketRef.current.emit('signal', { to: connId, signal }));
@@ -165,6 +179,18 @@ export default function MeetingRoom() {
                 <button onClick={toggleCam} style={btnStyle(camOn)}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>{camOn ? 'videocam' : 'videocam_off'}</span></button>
                 <button onClick={endMeeting} style={{ ...btnStyle(false, '#ff4d4d'), width: 54, borderRadius: 12 }}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>call_end</span></button>
             </div>
+
+            {connecting && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,10,10,0.92)', zIndex: 600, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                    <span className="material-icons" style={{ fontSize: 32, color: '#A855F7' }}>sync</span>
+                    <p style={{ color: 'white', fontSize: 15 }}>Connecting to session...</p>
+                    {slowConnect && (
+                        <p style={{ color: '#8892b0', fontSize: 13, maxWidth: 320, textAlign: 'center' }}>
+                            Taking longer than usual — the server may just be waking up from being idle. Hang tight a little longer.
+                        </p>
+                    )}
+                </div>
+            )}
 
             {inviteOpen && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setInviteOpen(false)}>

@@ -77,6 +77,7 @@ const notificationsRoutes = require("./routes/notifications");
 const passwordResetRoutes = require("./routes/passwordReset");
 const connectionsRoutes = require("./routes/connections");
 const messagesRoutes = require("./routes/messages");
+const turnRoutes = require("./routes/turn");
 app.use("/api/auth", authRoutes);
 app.use("/api/auth", passwordResetRoutes);
 app.use("/api/ai", aiRoutes);
@@ -87,6 +88,7 @@ app.use("/api/mentor-applications", mentorApplicationsRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/connections", connectionsRoutes);
 app.use("/api/messages", messagesRoutes);
+app.use("/api/turn-credentials", turnRoutes);
 
 // ===== STATIC FILES =====
 const distPath = path.join(__dirname, "dist");

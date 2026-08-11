@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import ParticleBackground from '../three/ParticleBackground';
 import '../styles/auth.css';
 
 export default function Login() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirect = searchParams.get('redirect');
     const [role, setRole] = useState('learner');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -31,6 +33,12 @@ export default function Login() {
             if (data.success) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('currentUser', JSON.stringify(data.user));
+                if (redirect) {
+                    // Someone came from a specific link (e.g. a meeting invite) —
+                    // honor that over the default role-based landing page.
+                    navigate(redirect);
+                    return;
+                }
                 const userRoles = data.user.roles || [data.user.role];
                 if (userRoles.includes('mentor')) {
                     localStorage.setItem('skillnest_has_mentor_role', 'true');
@@ -56,6 +64,9 @@ export default function Login() {
             <div className="auth-left">
                 <form className="auth-form" onSubmit={handleLogin}>
                     <div className="auth-brand">Learn. Teach. Grow.</div>
+                    {redirect && redirect.startsWith('/meeting') && (
+                        <p style={{ color: '#A855F7', fontSize: 13, marginTop: -10, marginBottom: 14 }}>Log in to join the session you were invited to.</p>
+                    )}
 
                     <div className="role-toggle">
                         <button type="button" className={role === 'learner' ? 'active' : ''} onClick={() => setRole('learner')}>Learn Skills</button>
@@ -94,7 +105,7 @@ export default function Login() {
                         Continue with Google
                     </button>
 
-                    <p className="bottom-text">Don't have an account? <Link to="/signup">Sign up for free</Link></p>
+                    <p className="bottom-text">Don't have an account? <Link to={redirect ? `/signup?redirect=${encodeURIComponent(redirect)}` : '/signup'}>Sign up for free</Link></p>
                 </form>
             </div>
             <div className="auth-right">

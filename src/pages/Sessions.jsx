@@ -26,9 +26,10 @@ export default function Sessions() {
     }
 
     function joinSession() {
-        if (!code) { alert('Enter a session code'); return; }
-        const d = getUserData(); d.sessions++; d.activity.unshift({ text: 'Joined session: ' + code, time: 'Just now' }); saveUserData(d);
-        navigate(`/meeting?meet=${code}`);
+        const normalized = code.trim().toLowerCase();
+        if (!normalized) { alert('Enter a session code'); return; }
+        const d = getUserData(); d.sessions++; d.activity.unshift({ text: 'Joined session: ' + normalized, time: 'Just now' }); saveUserData(d);
+        navigate(`/meeting?meet=${normalized}`);
     }
 
     function createSession() {

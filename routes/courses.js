@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/database");
 const { verifyToken } = require("../middleware/auth");
+const { notify } = require("../utils/notify");
 
 // GET /api/courses - Get all courses (public)
 router.get("/", async (req, res) => {
@@ -59,16 +60,19 @@ router.post("/", verifyToken, async (req, res) => {
 // POST /api/courses/:id/enroll
 router.post("/:id/enroll", verifyToken, async (req, res) => {
     try {
-        const course = await pool.query("SELECT id, mentor_id FROM courses WHERE id = $1", [req.params.id]);
+        const course = await pool.query("SELECT id, title, mentor_id FROM courses WHERE id = $1", [req.params.id]);
         if (course.rows.length === 0) return res.status(404).json({ success: false, message: "Course not found." });
         if (String(course.rows[0].mentor_id) === String(req.user.id)) {
             return res.status(400).json({ success: false, message: "You can't enroll in your own course." });
         }
 
-        await pool.query(
-            "INSERT INTO enrollments (course_id, student_id) VALUES ($1, $2) ON CONFLICT (course_id, student_id) DO NOTHING",
+        const inserted = await pool.query(
+            "INSERT INTO enrollments (course_id, student_id) VALUES ($1, $2) ON CONFLICT (course_id, student_id) DO NOTHING RETURNING id",
             [req.params.id, req.user.id]
         );
+        if (inserted.rows.length > 0 && course.rows[0].mentor_id) {
+            notify(course.rows[0].mentor_id, 'new_enrollment', `${req.user.name} enrolled in your course "${course.rows[0].title}"`, '/mentor/students');
+        }
         res.status(201).json({ success: true, message: "Enrolled!" });
     } catch (err) {
         console.error("Enroll error:", err);

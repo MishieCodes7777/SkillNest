@@ -24,6 +24,7 @@ const ICONS = {
     connection_request: 'person_add',
     connection_accepted: 'how_to_reg',
     new_message: 'mail',
+    new_enrollment: 'school',
 };
 
 export default function TopBar() {

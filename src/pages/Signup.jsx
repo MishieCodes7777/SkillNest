@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import ParticleBackground from '../three/ParticleBackground';
 import '../styles/auth.css';
 
 export default function Signup() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirect = searchParams.get('redirect');
     const [name, setName] = useState('');
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
@@ -33,6 +35,7 @@ export default function Signup() {
             if (data.success) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('currentUser', JSON.stringify(data.user));
+                if (redirect) { navigate(redirect); return; }
                 // Every account starts as a learner (see authController.signup) —
                 // picking "Teach Skills" here means "I'd like to apply," not an
                 // instant mentor grant, so route to the application instead.
@@ -47,6 +50,9 @@ export default function Signup() {
             <div className="auth-left">
                 <form className="auth-form" onSubmit={handleSignup}>
                     <div className="auth-brand">Create your account</div>
+                    {redirect && redirect.startsWith('/meeting') && (
+                        <p style={{ color: '#A855F7', fontSize: 13, marginTop: -10, marginBottom: 14 }}>Sign up to join the session you were invited to.</p>
+                    )}
                     <div className="input-group"><label>Full Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="Enter your full name" /></div>
                     <div className="input-group"><label>Username</label><input value={username} onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))} placeholder="e.g. bhavya.k or coder_123" /><span style={{ fontSize: '11px', color: '#555' }}>Lowercase, numbers, dots, underscores only</span></div>
                     <div className="input-group"><label>Email</label><input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email" /></div>
@@ -65,7 +71,7 @@ export default function Signup() {
                     <button type="submit" className="submit-btn" disabled={loading}>{loading ? 'Creating...' : 'Sign Up'}</button>
                     <div className="divider"><span>or</span></div>
                     <button type="button" className="google-btn" onClick={() => alert('Coming soon')}><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" />Continue with Google</button>
-                    <p className="bottom-text">Already have an account? <Link to="/login">Log in</Link></p>
+                    <p className="bottom-text">Already have an account? <Link to={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'}>Log in</Link></p>
                 </form>
             </div>
             <div className="auth-right">
