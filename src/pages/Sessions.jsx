@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import InvitePanel from '../components/InvitePanel';
+import FollowButton from '../components/FollowButton';
 import { getCurrentUser, getUserData, saveUserData } from '../utils/auth';
 import '../styles/sessions.css';
 
@@ -90,14 +91,16 @@ export default function Sessions() {
 
                 {mentors.length > 0 && (
                     <div className="sess-section">
-                        <h2><span className="material-icons">people</span> Registered Mentors</h2>
+                        <h2><span className="material-icons">people</span> Mentors</h2>
                         <div className="mentors-grid">
-                            {mentors.map((m, i) => (
-                                <div className="mentor-card" key={i}>
+                            {mentors.map((m) => (
+                                <div className="mentor-card" key={m.id} onClick={() => navigate(`/u/${m.id}`)} style={{ cursor: 'pointer' }}>
                                     <div className="mc-avatar">{m.name.charAt(0).toUpperCase()}</div>
                                     <h4>{m.name}</h4>
                                     <p>{m.role}</p>
-                                    <button className="mc-follow">Follow</button>
+                                    <div onClick={e => e.stopPropagation()}>
+                                        <FollowButton userId={m.id} me={user} />
+                                    </div>
                                 </div>
                             ))}
                         </div>

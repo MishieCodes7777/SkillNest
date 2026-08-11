@@ -16,7 +16,7 @@ async function grantMentorRole(userId) {
 router.get("/me", verifyToken, async (req, res) => {
     try {
         const result = await pool.query(
-            "SELECT id, status, motivation, skills, experience, created_at, reviewed_at FROM mentor_applications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+            "SELECT id, status, motivation, skills, experience, portfolio_url, projects, created_at, reviewed_at FROM mentor_applications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
             [req.user.id]
         );
         res.json({ success: true, application: result.rows[0] || null });
@@ -32,8 +32,17 @@ router.post("/", verifyToken, async (req, res) => {
         const motivation = (req.body.motivation || '').trim();
         const skills = (req.body.skills || '').trim();
         const experience = (req.body.experience || '').trim();
+        const portfolioUrl = (req.body.portfolioUrl || '').trim();
+        const projects = (req.body.projects || '').trim();
+
         if (!motivation) return res.status(400).json({ success: false, message: "Tell us why you'd like to become a mentor." });
-        if (motivation.length > 2000 || skills.length > 500 || experience.length > 2000) {
+        // Eligibility: a skills list alone isn't proof of anything — require a link to
+        // real work and at least one concrete project so admins have something to check.
+        if (!skills) return res.status(400).json({ success: false, message: "List at least one skill you can teach." });
+        if (!portfolioUrl) return res.status(400).json({ success: false, message: "A portfolio, resume, GitHub, or LinkedIn link is required." });
+        if (!/^https?:\/\/.+/i.test(portfolioUrl)) return res.status(400).json({ success: false, message: "Portfolio/resume link must be a valid URL (starting with http:// or https://)." });
+        if (!projects) return res.status(400).json({ success: false, message: "Describe at least one project you've built or worked on." });
+        if (motivation.length > 2000 || skills.length > 500 || experience.length > 2000 || portfolioUrl.length > 500 || projects.length > 2000) {
             return res.status(400).json({ success: false, message: "One of your answers is too long." });
         }
 
@@ -49,9 +58,9 @@ router.post("/", verifyToken, async (req, res) => {
         }
 
         const inserted = await pool.query(
-            `INSERT INTO mentor_applications (user_id, motivation, skills, experience)
-             VALUES ($1, $2, $3, $4) RETURNING id, status, created_at`,
-            [req.user.id, motivation, skills, experience]
+            `INSERT INTO mentor_applications (user_id, motivation, skills, experience, portfolio_url, projects)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, status, created_at`,
+            [req.user.id, motivation, skills, experience, portfolioUrl, projects]
         );
         res.status(201).json({ success: true, application: inserted.rows[0] });
     } catch (err) {
@@ -64,7 +73,7 @@ router.post("/", verifyToken, async (req, res) => {
 router.get("/", verifyToken, requireAdmin, async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT ma.id, ma.motivation, ma.skills, ma.experience, ma.status, ma.created_at,
+            `SELECT ma.id, ma.motivation, ma.skills, ma.experience, ma.portfolio_url, ma.projects, ma.status, ma.created_at,
                     u.id AS user_id, u.name, u.username, u.email, u.created_at AS member_since
              FROM mentor_applications ma JOIN users u ON u.id = ma.user_id
              WHERE ma.status = 'pending' ORDER BY ma.created_at ASC`

@@ -156,6 +156,10 @@ async function initDatabase() {
         `);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_mentor_apps_user_id ON mentor_applications(user_id)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_mentor_apps_status ON mentor_applications(status)`);
+        // Eligibility now requires proof, not just a skills list — a link to real work
+        // (portfolio/resume) and concrete project examples, reviewed by an admin.
+        await pool.query(`ALTER TABLE mentor_applications ADD COLUMN IF NOT EXISTS portfolio_url TEXT DEFAULT ''`).catch(() => { });
+        await pool.query(`ALTER TABLE mentor_applications ADD COLUMN IF NOT EXISTS projects TEXT DEFAULT ''`).catch(() => { });
         console.log("✅ Mentor applications table ready");
 
         // Notifications — real per-user activity feed for the bell icon

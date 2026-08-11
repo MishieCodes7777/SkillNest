@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { signup, login, logout, getMe, verifyAuth } = require("../controllers/authController");
-const { verifyToken } = require("../middleware/auth");
+const { verifyToken, requireAdmin } = require("../middleware/auth");
 const { signupValidation, loginValidation, handleValidation } = require("../middleware/validate");
 
 // POST /api/auth/signup
@@ -224,6 +224,31 @@ router.get("/mentors", verifyToken, async (req, res) => {
     } catch (err) {
         console.error("List mentors error:", err);
         res.status(500).json({ success: false, message: "Could not load mentors.", mentors: [] });
+    }
+});
+
+// DELETE /api/auth/users/:id - remove an account (admin only)
+// Blocked for the caller's own account and for any other admin account, so
+// cleanup can't accidentally lock everyone out of the admin panel.
+router.delete("/users/:id", verifyToken, requireAdmin, async (req, res) => {
+    const pool = require("../config/database");
+    const targetId = req.params.id;
+    try {
+        if (String(targetId) === String(req.user.id)) {
+            return res.status(400).json({ success: false, message: "You can't delete your own account from here." });
+        }
+        const admins = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+        const target = await pool.query("SELECT email FROM users WHERE id = $1", [targetId]);
+        if (target.rows.length === 0) return res.status(404).json({ success: false, message: "User not found." });
+        if (admins.includes((target.rows[0].email || "").toLowerCase())) {
+            return res.status(400).json({ success: false, message: "Can't delete another admin account from here." });
+        }
+
+        await pool.query("DELETE FROM users WHERE id = $1", [targetId]);
+        res.json({ success: true, message: "Account deleted." });
+    } catch (err) {
+        console.error("Delete user error:", err);
+        res.status(500).json({ success: false, message: "Could not delete account." });
     }
 });
 

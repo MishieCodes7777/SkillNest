@@ -15,6 +15,8 @@ export default function BecomeMentor() {
     const [motivation, setMotivation] = useState('');
     const [skills, setSkills] = useState('');
     const [experience, setExperience] = useState('');
+    const [portfolioUrl, setPortfolioUrl] = useState('');
+    const [projects, setProjects] = useState('');
     const [error, setError] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
@@ -52,11 +54,15 @@ export default function BecomeMentor() {
 
     async function submit() {
         if (!motivation.trim()) { setError("Tell us why you'd like to become a mentor."); return; }
+        if (!skills.trim()) { setError("List at least one skill you can teach."); return; }
+        if (!portfolioUrl.trim()) { setError("Add a portfolio, resume, GitHub, or LinkedIn link."); return; }
+        if (!/^https?:\/\/.+/i.test(portfolioUrl.trim())) { setError("Portfolio/resume link must start with http:// or https://"); return; }
+        if (!projects.trim()) { setError("Describe at least one project you've built or worked on."); return; }
         setSubmitting(true); setError('');
         try {
             const res = await fetch('/api/mentor-applications', {
                 method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ motivation: motivation.trim(), skills: skills.trim(), experience: experience.trim() }),
+                body: JSON.stringify({ motivation: motivation.trim(), skills: skills.trim(), experience: experience.trim(), portfolioUrl: portfolioUrl.trim(), projects: projects.trim() }),
             });
             const data = await res.json();
             if (data.success) { setApplication(data.application); }
@@ -99,7 +105,7 @@ export default function BecomeMentor() {
                         <div style={{ ...card, marginBottom: 18, borderColor: 'rgba(255,77,77,0.3)' }}>
                             <p style={{ color: '#ff8080', fontSize: 14 }}>Your last application wasn't approved. You're welcome to submit a new one below.</p>
                         </div>
-                        <ApplicationForm {...{ card, input, motivation, setMotivation, skills, setSkills, experience, setExperience, error, submit, submitting }} />
+                        <ApplicationForm {...{ card, input, motivation, setMotivation, skills, setSkills, experience, setExperience, portfolioUrl, setPortfolioUrl, projects, setProjects, error, submit, submitting }} />
                     </>
                 )}
 
@@ -111,7 +117,7 @@ export default function BecomeMentor() {
     );
 }
 
-function ApplicationForm({ card, input, motivation, setMotivation, skills, setSkills, experience, setExperience, error, submit, submitting }) {
+function ApplicationForm({ card, input, motivation, setMotivation, skills, setSkills, experience, setExperience, portfolioUrl, setPortfolioUrl, projects, setProjects, error, submit, submitting }) {
     return (
         <div style={card}>
             <div style={{ marginBottom: 16 }}>
@@ -122,9 +128,18 @@ function ApplicationForm({ card, input, motivation, setMotivation, skills, setSk
                 <label style={{ color: '#aaa', fontSize: 13, display: 'block', marginBottom: 6 }}>What could you teach?</label>
                 <input value={skills} onChange={e => setSkills(e.target.value)} placeholder="e.g. React, Python, System Design" style={input} maxLength={500} />
             </div>
+            <div style={{ marginBottom: 16 }}>
+                <label style={{ color: '#aaa', fontSize: 13, display: 'block', marginBottom: 6 }}>Portfolio, resume, GitHub, or LinkedIn link</label>
+                <input value={portfolioUrl} onChange={e => setPortfolioUrl(e.target.value)} placeholder="https://..." style={input} maxLength={500} />
+                <p style={{ color: '#666', fontSize: 11.5, marginTop: 5 }}>Required — gives reviewers something real to check before approving.</p>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+                <label style={{ color: '#aaa', fontSize: 13, display: 'block', marginBottom: 6 }}>Project(s) you've built or worked on</label>
+                <textarea value={projects} onChange={e => setProjects(e.target.value)} placeholder="Briefly describe at least one real project — what it was, your role, links if any" style={{ ...input, minHeight: 70, resize: 'vertical' }} maxLength={2000} />
+            </div>
             <div style={{ marginBottom: 20 }}>
                 <label style={{ color: '#aaa', fontSize: 13, display: 'block', marginBottom: 6 }}>Relevant experience (optional)</label>
-                <textarea value={experience} onChange={e => setExperience(e.target.value)} placeholder="Work experience, projects, prior teaching — whatever's relevant" style={{ ...input, minHeight: 70, resize: 'vertical' }} maxLength={2000} />
+                <textarea value={experience} onChange={e => setExperience(e.target.value)} placeholder="Work experience, prior teaching — whatever else is relevant" style={{ ...input, minHeight: 70, resize: 'vertical' }} maxLength={2000} />
             </div>
             {error && <p style={{ color: '#ff8080', fontSize: 13, marginBottom: 14 }}>{error}</p>}
             <button onClick={submit} disabled={submitting} style={{ width: '100%', padding: 14, background: 'linear-gradient(45deg,#FF4FA3,#A855F7)', border: 'none', borderRadius: 10, color: 'white', fontSize: 15, fontWeight: 600, cursor: 'pointer', opacity: submitting ? 0.6 : 1 }}>{submitting ? 'Submitting...' : 'Submit Application'}</button>

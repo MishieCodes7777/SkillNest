@@ -67,12 +67,25 @@ export default function MeetingRoom() {
 
     function createPeer(connId, initiator) {
         const peer = new SimplePeer({
-            initiator, trickle: false, stream: localStreamRef.current,
-            config: { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] },
+            initiator, trickle: true, stream: localStreamRef.current,
+            config: {
+                iceServers: [
+                    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+                    // STUN alone only works when both sides can find a direct path to each
+                    // other — it fails on plenty of real networks (campus wifi, mobile data,
+                    // strict/symmetric NATs), which is exactly what "I join but never see the
+                    // other person" looks like. A TURN relay is the fallback for those cases.
+                    { urls: 'stun:openrelay.metered.ca:80' },
+                    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+                    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+                ],
+            },
         });
         peersRef.current[connId] = peer;
         peer.on('signal', signal => socketRef.current.emit('signal', { to: connId, signal }));
         peer.on('stream', stream => setRemoteStreams(prev => ({ ...prev, [connId]: stream })));
+        peer.on('error', err => console.warn('Peer connection error', connId, err.message));
     }
 
     function cleanup() {

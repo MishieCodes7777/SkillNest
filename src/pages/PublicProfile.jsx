@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import CommunityFeed from '../components/CommunityFeed';
+import FollowButton from '../components/FollowButton';
 import { getCurrentUser } from '../utils/auth';
 
 function safeParseArray(val) { if (Array.isArray(val)) return val; try { return JSON.parse(val || '[]'); } catch (e) { return []; } }
@@ -55,6 +56,7 @@ export default function PublicProfile() {
                     {isMe && (
                         <button onClick={() => navigate(user.role === 'mentor' ? '/mentor/settings' : '/profile')} style={{ padding: '9px 18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', cursor: 'pointer', fontSize: 13 }}>Edit Profile</button>
                     )}
+                    {!isMe && <FollowButton userId={user.id} me={me} />}
                 </div>
 
                 {mentorProfile?.bio && (
