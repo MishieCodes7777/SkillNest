@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import ParticleBackground from '../three/ParticleBackground';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import '../styles/auth.css';
 
 export default function Signup() {
@@ -15,6 +16,16 @@ export default function Signup() {
     const [role, setRole] = useState('learner');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    function handleAuthSuccess(data) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        if (redirect) { navigate(redirect); return; }
+        // Every account starts as a learner (see authController.signup) —
+        // picking "Teach Skills" here means "I'd like to apply," not an
+        // instant mentor grant, so route to the application instead.
+        navigate(role === 'mentor' ? '/become-mentor' : '/dashboard');
+    }
 
     async function handleSignup(e) {
         e.preventDefault();
@@ -32,15 +43,8 @@ export default function Signup() {
                 body: JSON.stringify({ name, username, email, password, role }),
             });
             const data = await res.json();
-            if (data.success) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('currentUser', JSON.stringify(data.user));
-                if (redirect) { navigate(redirect); return; }
-                // Every account starts as a learner (see authController.signup) —
-                // picking "Teach Skills" here means "I'd like to apply," not an
-                // instant mentor grant, so route to the application instead.
-                navigate(role === 'mentor' ? '/become-mentor' : '/dashboard');
-            } else { setError(data.message); }
+            if (data.success) handleAuthSuccess(data);
+            else setError(data.message);
         } catch (err) { setError('Unable to connect to server.'); }
         setLoading(false);
     }
@@ -70,7 +74,7 @@ export default function Signup() {
                     {error && <div className="auth-error">{error}</div>}
                     <button type="submit" className="submit-btn" disabled={loading}>{loading ? 'Creating...' : 'Sign Up'}</button>
                     <div className="divider"><span>or</span></div>
-                    <button type="button" className="google-btn" onClick={() => alert('Coming soon')}><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" />Continue with Google</button>
+                    <GoogleSignInButton onSuccess={handleAuthSuccess} onError={setError} />
                     <p className="bottom-text">Already have an account? <Link to={redirect ? `/login?redirect=${encodeURIComponent(redirect)}` : '/login'}>Log in</Link></p>
                 </form>
             </div>

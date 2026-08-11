@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import ParticleBackground from '../three/ParticleBackground';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 import '../styles/auth.css';
 
 export default function Login() {
@@ -13,6 +14,28 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    function handleAuthSuccess(data) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        if (redirect) {
+            // Someone came from a specific link (e.g. a meeting invite) —
+            // honor that over the default role-based landing page.
+            navigate(redirect);
+            return;
+        }
+        const userRoles = data.user.roles || [data.user.role];
+        if (userRoles.includes('mentor')) {
+            localStorage.setItem('skillnest_has_mentor_role', 'true');
+            navigate('/mentor/dashboard');
+        } else if (role === 'mentor') {
+            // Not a verified mentor yet — send them to apply instead of
+            // granting the role on the spot.
+            navigate('/become-mentor');
+        } else {
+            navigate('/dashboard');
+        }
+    }
 
     async function handleLogin(e) {
         e.preventDefault();
@@ -29,30 +52,8 @@ export default function Login() {
                 body: JSON.stringify({ email, password }),
             });
             const data = await res.json();
-
-            if (data.success) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('currentUser', JSON.stringify(data.user));
-                if (redirect) {
-                    // Someone came from a specific link (e.g. a meeting invite) —
-                    // honor that over the default role-based landing page.
-                    navigate(redirect);
-                    return;
-                }
-                const userRoles = data.user.roles || [data.user.role];
-                if (userRoles.includes('mentor')) {
-                    localStorage.setItem('skillnest_has_mentor_role', 'true');
-                    navigate('/mentor/dashboard');
-                } else if (role === 'mentor') {
-                    // Not a verified mentor yet — send them to apply instead of
-                    // granting the role on the spot.
-                    navigate('/become-mentor');
-                } else {
-                    navigate('/dashboard');
-                }
-            } else {
-                setError(data.message || 'Invalid email or password.');
-            }
+            if (data.success) handleAuthSuccess(data);
+            else setError(data.message || 'Invalid email or password.');
         } catch (err) {
             setError('Unable to connect to server.');
         }
@@ -100,10 +101,7 @@ export default function Login() {
 
                     <div className="divider"><span>or</span></div>
 
-                    <button type="button" className="google-btn" onClick={() => alert('Google Sign-In coming soon')}>
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" />
-                        Continue with Google
-                    </button>
+                    <GoogleSignInButton onSuccess={handleAuthSuccess} onError={setError} />
 
                     <p className="bottom-text">Don't have an account? <Link to={redirect ? `/signup?redirect=${encodeURIComponent(redirect)}` : '/signup'}>Sign up for free</Link></p>
                 </form>

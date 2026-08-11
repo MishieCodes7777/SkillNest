@@ -21,12 +21,26 @@ export default function Profile() {
     const [newUsername, setNewUsername] = useState(user?.username || '');
     const [usernameStatus, setUsernameStatus] = useState('');
     const [usernameError, setUsernameError] = useState('');
-    const [profilePic, setProfilePic] = useState(localStorage.getItem('skillnest_profile_pic') || '');
+    const [profilePic, setProfilePic] = useState(user?.avatar_url || '');
+    const [photoSaving, setPhotoSaving] = useState(false);
 
     const hasUsername = !!user?.username;
 
     // Track profile visit for daily mission
     useEffect(() => { trackActivity('profile_visited'); }, []);
+
+    // The photo lives server-side now (so it's visible to others, e.g. in a
+    // meeting) — refresh from the account instead of trusting a stale local copy.
+    useEffect(() => {
+        fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } })
+            .then(r => r.json())
+            .then(d => {
+                if (!d.success) return;
+                setProfilePic(d.user.avatar_url || '');
+                localStorage.setItem('currentUser', JSON.stringify({ ...user, ...d.user }));
+            })
+            .catch(() => { });
+    }, []);
 
     function getMemberSince(user) {
         // Check stored created_at
@@ -103,12 +117,22 @@ export default function Profile() {
         setPwSaving(false);
     }
 
-    function saveProfile() {
+    async function saveProfile() {
         if (newName.trim()) {
             const u = { ...user, name: newName.trim() };
             localStorage.setItem('currentUser', JSON.stringify(u));
         }
-        if (profilePic) localStorage.setItem('skillnest_profile_pic', profilePic);
+        if (profilePic && profilePic !== user?.avatar_url) {
+            setPhotoSaving(true);
+            try {
+                await fetch('/api/auth/avatar', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+                    body: JSON.stringify({ avatar_url: profilePic }),
+                });
+            } catch (e) { /* name change (if any) still applies below */ }
+            setPhotoSaving(false);
+        }
         setEditOpen(false);
         window.location.reload();
     }
@@ -169,7 +193,7 @@ export default function Profile() {
                                     <div><p>Profile Picture</p><label className="upload-btn" htmlFor="fileInput"><span className="material-icons" style={{ fontSize: '16px' }}>upload</span> Upload</label><input type="file" id="fileInput" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} /></div>
                                 </div>
                                 <div className="modal-input"><label>Display Name</label><input value={newName} onChange={e => setNewName(e.target.value)} /></div>
-                                <div className="modal-actions"><button className="m-cancel" onClick={() => setEditOpen(false)}>Cancel</button><button className="m-save" onClick={saveProfile}>Save</button></div>
+                                <div className="modal-actions"><button className="m-cancel" onClick={() => setEditOpen(false)}>Cancel</button><button className="m-save" disabled={photoSaving} onClick={saveProfile}>{photoSaving ? 'Saving...' : 'Save'}</button></div>
                             </div>
                         </div>
                     </div>

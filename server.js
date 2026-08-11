@@ -20,13 +20,15 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'"],
+            scriptSrc: ["'self'", "https://accounts.google.com/gsi/client"],
             // Inline `style={{...}}` props (used throughout the React app) render as
             // inline style attributes, which need 'unsafe-inline' here to keep working.
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             imgSrc: ["'self'", "data:", "https://images.unsplash.com", "https://www.gstatic.com"],
-            connectSrc: ["'self'", "ws:", "wss:"],
+            connectSrc: ["'self'", "ws:", "wss:", "https://accounts.google.com"],
+            // The Google Sign-In button renders inside an iframe from Google's origin.
+            frameSrc: ["https://accounts.google.com"],
         },
     },
     crossOriginEmbedderPolicy: false,
@@ -43,6 +45,13 @@ app.use(cors({
     origin: allowedOrigins,
     credentials: true,
 }));
+
+// Photo uploads (sent as base64 data URLs) need a bigger body than the 10kb
+// default kept everywhere else as a DoS mitigation — scoped narrowly to just
+// these two routes, registered before the general small-limit parser below so
+// it runs first; body-parser skips re-parsing a body it's already read.
+app.use("/api/mentor/profile", express.json({ limit: "3mb" }));
+app.use("/api/auth/avatar", express.json({ limit: "3mb" }));
 
 // 4. Body parser with size limit (10kb max)
 app.use(express.json({ limit: "10kb" }));
@@ -154,9 +163,11 @@ let userConnections = [];
 io.on("connection", (socket) => {
     socket.on("userconnect", (data) => {
         const others = userConnections.filter(p => p.meeting_id === data.meetingid);
-        userConnections.push({ connectionId: socket.id, user_id: socket.user.name, meeting_id: data.meetingid });
+        // user_id here is the real numeric account id (trusted, from the verified
+        // JWT) — used by the frontend to fetch that person's profile photo.
+        userConnections.push({ connectionId: socket.id, user_id: socket.user.id, meeting_id: data.meetingid });
         socket.emit("all-users", others);
-        others.forEach(user => { socket.to(user.connectionId).emit("user-joined", { connId: socket.id, user_id: socket.user.name }); });
+        others.forEach(user => { socket.to(user.connectionId).emit("user-joined", { connId: socket.id, user_id: socket.user.id }); });
     });
 
     socket.on("signal", (data) => { socket.to(data.to).emit("signal", { from: socket.id, signal: data.signal }); });
@@ -170,6 +181,17 @@ io.on("connection", (socket) => {
     socket.on("hand-raised", (data) => {
         const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
         meetUsers.forEach(u => { socket.to(u.connectionId).emit("hand-raised", data); });
+    });
+
+    // Mic/camera state — relayed with the sender's own socket id attached so
+    // the receiving side can map it to the right video tile (mirrors "signal").
+    socket.on("mic-toggle", (data) => {
+        const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
+        meetUsers.forEach(u => { socket.to(u.connectionId).emit("mic-toggle", { from: socket.id, muted: data.muted }); });
+    });
+    socket.on("cam-toggle", (data) => {
+        const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
+        meetUsers.forEach(u => { socket.to(u.connectionId).emit("cam-toggle", { from: socket.id, camOn: data.camOn }); });
     });
 
     socket.on("disconnect", () => {

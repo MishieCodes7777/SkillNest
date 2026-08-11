@@ -207,7 +207,10 @@ function logout(req, res) {
 async function getMe(req, res) {
     try {
         const result = await pool.query(
-            "SELECT id, name, username, email, role, roles, created_at FROM users WHERE id = $1",
+            `SELECT u.id, u.name, u.username, u.email, u.role, u.roles, u.created_at,
+                    COALESCE(NULLIF(mp.profile_photo, ''), u.avatar_url, '') AS avatar_url
+             FROM users u LEFT JOIN mentor_profiles mp ON mp.user_id = u.id
+             WHERE u.id = $1`,
             [req.user.id]
         );
 
@@ -224,7 +227,7 @@ async function getMe(req, res) {
 
         return res.status(200).json({
             success: true,
-            user: { id: row.id, name: row.name, username: row.username, email: row.email, role: row.role, roles, created_at: row.created_at },
+            user: { id: row.id, name: row.name, username: row.username, email: row.email, role: row.role, roles, created_at: row.created_at, avatar_url: row.avatar_url },
         });
     } catch (err) {
         console.error("GetMe error:", err);

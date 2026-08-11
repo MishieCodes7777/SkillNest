@@ -27,6 +27,13 @@ export default function MeetingRoom() {
     const [inviteOpen, setInviteOpen] = useState(false);
     const [connecting, setConnecting] = useState(true);
     const [slowConnect, setSlowConnect] = useState(false);
+    const [sharingScreen, setSharingScreen] = useState(false);
+    const [shareAudioEnabled, setShareAudioEnabled] = useState(false);
+    const [myAvatar, setMyAvatar] = useState('');
+    // Per-peer info keyed by connId: { userId, avatarUrl, muted, camOff }.
+    // Muted/camOff come from explicit mic-toggle/cam-toggle broadcasts (there's
+    // no other reliable way to tell "silent" apart from "actually muted").
+    const [remotePeers, setRemotePeers] = useState({});
 
     const localVideoRef = useRef(null);
     const localStreamRef = useRef(null);
@@ -34,6 +41,12 @@ export default function MeetingRoom() {
     const peersRef = useRef({});
     const startTimeRef = useRef(Date.now());
     const iceServersRef = useRef([{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }]);
+    // Whichever video track is currently being sent — camera or screen. A ref
+    // (not state) because createPeer/socket handlers close over it from a
+    // single effect run and would otherwise see a stale value.
+    const activeVideoTrackRef = useRef(null);
+    const screenStreamRef = useRef(null);
+    const sharingScreenRef = useRef(false);
 
     useEffect(() => {
         // Preserve where they were trying to go — otherwise anyone who clicks a
@@ -42,6 +55,8 @@ export default function MeetingRoom() {
         if (!isLoggedIn()) { navigate('/login?redirect=' + encodeURIComponent(`/meeting?meet=${meetId}`)); return; }
         if (!meetId) { navigate('/sessions'); return; }
         init();
+        fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } })
+            .then(r => r.json()).then(d => { if (d.success) setMyAvatar(d.user.avatar_url || ''); }).catch(() => { });
         const interval = setInterval(updateTimer, 1000);
         // A free-tier backend that's been idle can take 30-60s to wake up —
         // without this, that delay looks identical to the meeting being broken.
@@ -61,6 +76,7 @@ export default function MeetingRoom() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             localStreamRef.current = stream;
+            activeVideoTrackRef.current = stream.getVideoTracks()[0] || null;
             if (localVideoRef.current) localVideoRef.current.srcObject = stream;
         } catch (e) { console.warn('Camera error', e); }
 
@@ -77,13 +93,28 @@ export default function MeetingRoom() {
         socket.on('connect', () => {
             setConnecting(false);
             socket.emit('userconnect', { meetingid: meetId });
-            socket.on('all-users', users => users.forEach(u => createPeer(u.connectionId, true)));
-            socket.on('user-joined', data => createPeer(data.connId, false));
+            socket.on('all-users', users => users.forEach(u => { createPeer(u.connectionId, true); trackPeer(u.connectionId, u.user_id); }));
+            socket.on('user-joined', data => { createPeer(data.connId, false); trackPeer(data.connId, data.user_id); });
             socket.on('signal', data => { if (!peersRef.current[data.from]) createPeer(data.from, false); peersRef.current[data.from].signal(data.signal); });
-            socket.on('user-left', data => { if (peersRef.current[data.connId]) { peersRef.current[data.connId].destroy(); delete peersRef.current[data.connId]; } setRemoteStreams(prev => { const n = { ...prev }; delete n[data.connId]; return n; }); });
+            socket.on('user-left', data => {
+                if (peersRef.current[data.connId]) { peersRef.current[data.connId].destroy(); delete peersRef.current[data.connId]; }
+                setRemoteStreams(prev => { const n = { ...prev }; delete n[data.connId]; return n; });
+                setRemotePeers(prev => { const n = { ...prev }; delete n[data.connId]; return n; });
+            });
             socket.on('chat-message', data => setChatMsgs(prev => [...prev, data]));
+            socket.on('mic-toggle', data => setRemotePeers(prev => ({ ...prev, [data.from]: { ...prev[data.from], muted: data.muted } })));
+            socket.on('cam-toggle', data => setRemotePeers(prev => ({ ...prev, [data.from]: { ...prev[data.from], camOff: !data.camOn } })));
         });
         socket.on('connect_error', (err) => { setConnecting(false); setAuthError(err.message || 'Could not join the meeting.'); });
+    }
+
+    function trackPeer(connId, userId) {
+        if (!userId) return;
+        setRemotePeers(prev => ({ ...prev, [connId]: { ...prev[connId], userId } }));
+        fetch(`/api/auth/users/${userId}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } })
+            .then(r => r.json())
+            .then(d => { if (d.success) setRemotePeers(prev => ({ ...prev, [connId]: { ...prev[connId], avatarUrl: d.user.avatar_url || '' } })); })
+            .catch(() => { });
     }
 
     function createPeer(connId, initiator) {
@@ -100,16 +131,89 @@ export default function MeetingRoom() {
         peer.on('signal', signal => socketRef.current.emit('signal', { to: connId, signal }));
         peer.on('stream', stream => setRemoteStreams(prev => ({ ...prev, [connId]: stream })));
         peer.on('error', err => console.warn('Peer connection error', connId, err.message));
+        // If someone joins mid-screen-share, their very first offer/answer already
+        // carries the camera track (from `stream` above) — swap it for the screen
+        // track right away so they see the share instead of a frozen camera frame.
+        if (sharingScreenRef.current && activeVideoTrackRef.current) {
+            const camTrack = localStreamRef.current?.getVideoTracks()[0];
+            if (camTrack && camTrack !== activeVideoTrackRef.current) {
+                try { peer.replaceTrack(camTrack, activeVideoTrackRef.current, localStreamRef.current); } catch (e) { /* peer not ready yet; ignore */ }
+            }
+        }
+    }
+
+    async function startScreenShare() {
+        try {
+            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: shareAudioEnabled });
+            const screenTrack = screenStream.getVideoTracks()[0];
+            const oldTrack = activeVideoTrackRef.current;
+            Object.values(peersRef.current).forEach(peer => {
+                try { peer.replaceTrack(oldTrack, screenTrack, localStreamRef.current); } catch (e) { console.warn('replaceTrack failed', e); }
+            });
+            const screenAudioTrack = screenStream.getAudioTracks()[0];
+            if (screenAudioTrack) {
+                Object.values(peersRef.current).forEach(peer => {
+                    try { peer.addTrack(screenAudioTrack, screenStream); } catch (e) { /* non-fatal */ }
+                });
+            }
+            screenStreamRef.current = screenStream;
+            activeVideoTrackRef.current = screenTrack;
+            sharingScreenRef.current = true;
+            setSharingScreen(true);
+            if (localVideoRef.current) localVideoRef.current.srcObject = screenStream;
+            // Fires when the share ends via the browser's own "Stop sharing" control
+            // (the tab bar / OS picker bar), not just our in-app button.
+            screenTrack.onended = () => stopScreenShare();
+        } catch (e) {
+            if (e.name !== 'NotAllowedError') console.warn('Screen share failed', e);
+        }
+    }
+
+    function stopScreenShare() {
+        const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
+        const screenTrack = activeVideoTrackRef.current;
+        if (cameraTrack && screenTrack && cameraTrack !== screenTrack) {
+            Object.values(peersRef.current).forEach(peer => {
+                try { peer.replaceTrack(screenTrack, cameraTrack, localStreamRef.current); } catch (e) { /* peer may have closed */ }
+            });
+        }
+        if (screenStreamRef.current) {
+            const screenAudioTrack = screenStreamRef.current.getAudioTracks()[0];
+            if (screenAudioTrack) {
+                Object.values(peersRef.current).forEach(peer => {
+                    try { peer.removeTrack(screenAudioTrack, screenStreamRef.current); } catch (e) { /* non-fatal */ }
+                });
+            }
+            screenStreamRef.current.getTracks().forEach(t => t.stop());
+            screenStreamRef.current = null;
+        }
+        activeVideoTrackRef.current = cameraTrack || null;
+        sharingScreenRef.current = false;
+        setSharingScreen(false);
+        if (localVideoRef.current && localStreamRef.current) localVideoRef.current.srcObject = localStreamRef.current;
     }
 
     function cleanup() {
         if (socketRef.current) socketRef.current.disconnect();
         Object.values(peersRef.current).forEach(p => p.destroy());
         if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
+        if (screenStreamRef.current) screenStreamRef.current.getTracks().forEach(t => t.stop());
     }
 
-    function toggleMic() { if (localStreamRef.current) { localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = !t.enabled; }); setMicOn(p => !p); } }
-    function toggleCam() { if (localStreamRef.current) { localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = !t.enabled; }); setCamOn(p => !p); } }
+    function toggleMic() {
+        if (!localStreamRef.current) return;
+        const next = !micOn;
+        localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = next; });
+        setMicOn(next);
+        socketRef.current?.emit('mic-toggle', { meetingid: meetId, muted: !next });
+    }
+    function toggleCam() {
+        if (!localStreamRef.current) return;
+        const next = !camOn;
+        localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = next; });
+        setCamOn(next);
+        socketRef.current?.emit('cam-toggle', { meetingid: meetId, camOn: next });
+    }
 
     function sendChat() {
         if (!chatInput.trim()) return;
@@ -154,10 +258,16 @@ export default function MeetingRoom() {
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                 <div style={{ flex: 1, display: 'grid', gridTemplateColumns: Object.keys(remoteStreams).length > 0 ? 'repeat(auto-fit,minmax(280px,1fr))' : '1fr', gap: 10, padding: 15, alignContent: 'center' }}>
                     <div style={{ background: '#1F1F1F', borderRadius: 12, position: 'relative', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <video ref={localVideoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12 }} />
-                        <span style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(0,0,0,0.7)', padding: '4px 10px', borderRadius: 4, fontSize: 12 }}>{userName} (You)</span>
+                        <video ref={localVideoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12, display: camOn || sharingScreen ? 'block' : 'none' }} />
+                        {!camOn && !sharingScreen && <AvatarFallback avatarUrl={myAvatar} name={userName} />}
+                        <span style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(0,0,0,0.7)', padding: '4px 10px', borderRadius: 4, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {!micOn && <span className="material-icons" style={{ fontSize: 14, color: '#ff6b6b' }}>mic_off</span>}
+                            {userName} (You)
+                        </span>
                     </div>
-                    {Object.entries(remoteStreams).map(([id, stream]) => <RemoteVideo key={id} stream={stream} />)}
+                    {Object.entries(remoteStreams).map(([id, stream]) => (
+                        <RemoteVideo key={id} stream={stream} peer={remotePeers[id]} />
+                    ))}
                 </div>
 
                 {/* Chat */}
@@ -177,6 +287,13 @@ export default function MeetingRoom() {
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 15, background: '#111', borderTop: '1px solid #222' }}>
                 <button onClick={toggleMic} style={btnStyle(micOn)}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>{micOn ? 'mic' : 'mic_off'}</span></button>
                 <button onClick={toggleCam} style={btnStyle(camOn)}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>{camOn ? 'videocam' : 'videocam_off'}</span></button>
+                <button onClick={sharingScreen ? stopScreenShare : startScreenShare} title={sharingScreen ? 'Stop sharing' : 'Share screen'} style={btnStyle(!sharingScreen, sharingScreen ? '#34c759' : undefined)}>
+                    <span className="material-icons" style={{ color: 'white', fontSize: 22 }}>{sharingScreen ? 'stop_screen_share' : 'screen_share'}</span>
+                </button>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#8892b0', cursor: sharingScreen ? 'default' : 'pointer', userSelect: 'none' }}>
+                    <input type="checkbox" checked={shareAudioEnabled} disabled={sharingScreen} onChange={e => setShareAudioEnabled(e.target.checked)} />
+                    Share audio too
+                </label>
                 <button onClick={endMeeting} style={{ ...btnStyle(false, '#ff4d4d'), width: 54, borderRadius: 12 }}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>call_end</span></button>
             </div>
 
@@ -209,8 +326,38 @@ export default function MeetingRoom() {
     );
 }
 
-function RemoteVideo({ stream }) {
+function RemoteVideo({ stream, peer }) {
     const ref = useRef();
     useEffect(() => { if (ref.current) ref.current.srcObject = stream; }, [stream]);
-    return <div style={{ background: '#1F1F1F', borderRadius: 12, minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><video ref={ref} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12 }} /></div>;
+    const camOff = peer?.camOff;
+    return (
+        <div style={{ background: '#1F1F1F', borderRadius: 12, position: 'relative', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <video ref={ref} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12, display: camOff ? 'none' : 'block' }} />
+            {camOff && <AvatarFallback avatarUrl={peer?.avatarUrl} />}
+            {peer?.muted && (
+                <span style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(0,0,0,0.7)', borderRadius: '50%', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="material-icons" style={{ fontSize: 15, color: '#ff6b6b' }}>mic_off</span>
+                </span>
+            )}
+        </div>
+    );
+}
+
+// Shown in place of video when the camera is off: the person's real photo if
+// they've set one, otherwise a generic silhouette (no external image needed).
+function AvatarFallback({ avatarUrl, name }) {
+    return (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 12, overflow: 'hidden' }}>
+            {avatarUrl ? (
+                <img src={avatarUrl} alt={name || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+                <div style={{ width: 84, height: 84, borderRadius: '50%', background: '#2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg viewBox="0 0 100 100" width="60%" height="60%">
+                        <circle cx="50" cy="36" r="20" fill="#666" />
+                        <path d="M15 95 C15 65 35 55 50 55 C65 55 85 65 85 95 Z" fill="#666" />
+                    </svg>
+                </div>
+            )}
+        </div>
+    );
 }

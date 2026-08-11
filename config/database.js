@@ -46,6 +46,13 @@ async function initDatabase() {
         await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS roles TEXT DEFAULT '["learner"]'`).catch(() => { });
         await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255)`).catch(() => { });
         await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expiry TIMESTAMP`).catch(() => { });
+        // Google Sign-In: accounts created this way still get a normal (random,
+        // unusable) password hash so the existing NOT NULL password column and
+        // password-login path don't need special-casing anywhere else.
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE`).catch(() => { });
+        // Every account's own photo (learners included — mentor_profiles.profile_photo
+        // only ever covered mentors). Stored as a data URL, same as mentor photos.
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT ''`).catch(() => { });
         await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_users_email
     ON users(email);

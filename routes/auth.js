@@ -3,12 +3,100 @@ const router = express.Router();
 const { signup, login, logout, getMe, verifyAuth } = require("../controllers/authController");
 const { verifyToken, requireAdmin } = require("../middleware/auth");
 const { signupValidation, loginValidation, handleValidation } = require("../middleware/validate");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const { OAuth2Client } = require("google-auth-library");
+const googleClient = process.env.VITE_GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID) : null;
 
 // POST /api/auth/signup
 router.post("/signup", signupValidation, handleValidation, signup);
 
 // POST /api/auth/login
 router.post("/login", loginValidation, handleValidation, login);
+
+// POST /api/auth/google - sign up or log in with a Google ID token.
+// Every account still starts as role='learner', same as normal signup — this
+// never grants mentor status; that still requires a reviewed application
+// (routes/mentorApplications.js). "Sign in as a mentor" just controls where
+// the frontend routes you afterward, same as the existing role toggle does.
+router.post("/google", async (req, res) => {
+    const pool = require("../config/database");
+    if (!googleClient) {
+        return res.status(503).json({ success: false, message: "Google Sign-In isn't configured on this server yet." });
+    }
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ success: false, message: "Missing Google credential." });
+
+    try {
+        const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: process.env.VITE_GOOGLE_CLIENT_ID });
+        const payload = ticket.getPayload();
+        if (!payload?.email_verified) {
+            return res.status(401).json({ success: false, message: "Google account email isn't verified." });
+        }
+
+        const email = payload.email.toLowerCase();
+        const existing = await pool.query("SELECT id, name, username, email, role, roles, google_id FROM users WHERE email = $1", [email]);
+
+        let user;
+        if (existing.rows.length > 0) {
+            user = existing.rows[0];
+            // First time this existing (password-based) account uses Google — link it.
+            if (!user.google_id) {
+                await pool.query("UPDATE users SET google_id = $1, updated_at = NOW() WHERE id = $2", [payload.sub, user.id]);
+            }
+        } else {
+            // Generate a unique username from the email, and a random password the
+            // user will never see or need — this account only ever logs in via Google,
+            // but the `password` column is NOT NULL and every other code path assumes
+            // a real bcrypt hash lives there.
+            let base = (payload.given_name || email.split('@')[0] || 'user').toLowerCase().replace(/[^a-z0-9._]/g, '');
+            if (base.length < 3) base = ('user' + base).slice(0, 20);
+            let username = base;
+            let suffix = 0;
+            while (true) {
+                const taken = await pool.query("SELECT id FROM users WHERE username = $1", [username]);
+                if (taken.rows.length === 0) break;
+                suffix++;
+                username = `${base}${suffix}`;
+            }
+            const randomPassword = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
+
+            const inserted = await pool.query(
+                `INSERT INTO users (name, username, email, password, role, roles, google_id)
+                 VALUES ($1, $2, $3, $4, 'learner', '["learner"]', $5)
+                 RETURNING id, name, username, email, role, created_at`,
+                [payload.name || base, username, email, randomPassword, payload.sub]
+            );
+            user = { ...inserted.rows[0], roles: '["learner"]' };
+        }
+
+        let roles = ['learner'];
+        try { roles = JSON.parse(user.roles || '["learner"]'); } catch (e) { roles = [user.role || 'learner']; }
+
+        const token = jwt.sign(
+            { id: user.id, name: user.name, email: user.email, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+        );
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        res.json({
+            success: true,
+            message: "Signed in with Google!",
+            user: { id: user.id, name: user.name, username: user.username, email: user.email, role: user.role, roles },
+            token,
+        });
+    } catch (err) {
+        console.error("Google sign-in error:", err.message);
+        res.status(401).json({ success: false, message: "Could not verify Google sign-in." });
+    }
+});
 
 // POST /api/auth/logout
 router.post("/logout", logout);
@@ -203,15 +291,38 @@ router.get("/stats", verifyToken, async (req, res) => {
 });
 
 // GET /api/auth/users/:id - Get one user's public info (for profile pages)
+// avatar_url prefers the mentor profile photo (if they have one) over the
+// account-level one, since that's the photo they curated for their mentor page.
 router.get("/users/:id", verifyToken, async (req, res) => {
     const pool = require("../config/database");
     try {
-        const result = await pool.query("SELECT id, name, username, role, created_at FROM users WHERE id = $1", [req.params.id]);
+        const result = await pool.query(
+            `SELECT u.id, u.name, u.username, u.role, u.created_at,
+                    COALESCE(NULLIF(mp.profile_photo, ''), u.avatar_url, '') AS avatar_url
+             FROM users u LEFT JOIN mentor_profiles mp ON mp.user_id = u.id
+             WHERE u.id = $1`,
+            [req.params.id]
+        );
         if (result.rows.length === 0) return res.status(404).json({ success: false, message: "User not found." });
         res.json({ success: true, user: result.rows[0] });
     } catch (err) {
         console.error("Get user error:", err);
         res.status(500).json({ success: false, message: "Could not load user." });
+    }
+});
+
+// PUT /api/auth/avatar - set/update your own profile photo (data URL or image URL)
+router.put("/avatar", verifyToken, async (req, res) => {
+    const pool = require("../config/database");
+    const { avatar_url } = req.body;
+    if (typeof avatar_url !== 'string') return res.status(400).json({ success: false, message: "Missing photo." });
+    if (avatar_url.length > 2_800_000) return res.status(413).json({ success: false, message: "Image is too large. Try a smaller photo (max ~2MB)." });
+    try {
+        await pool.query("UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2", [avatar_url, req.user.id]);
+        res.json({ success: true, message: "Profile photo updated.", avatar_url });
+    } catch (err) {
+        console.error("Update avatar error:", err);
+        res.status(500).json({ success: false, message: "Could not update photo." });
     }
 });
 
