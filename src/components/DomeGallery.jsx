@@ -3,6 +3,7 @@ import { useGesture } from '@use-gesture/react';
 import './DomeGallery.css';
 
 const DEFAULTS = { maxVerticalRotationDeg: 5, dragSensitivity: 20, enlargeTransitionMs: 300, segments: 35 };
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400&h=400&fit=crop';
 const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 const normalizeAngle = d => ((d % 360) + 360) % 360;
 const wrapAngleSigned = deg => { const a = (((deg + 180) % 360) + 360) % 360; return a - 180; };
@@ -25,7 +26,7 @@ function computeItemBaseRotation(offsetX, offsetY, sizeX, sizeY, segments) {
     return { rotateX: unit * (offsetY - (sizeY - 1) / 2), rotateY: unit * (offsetX + (sizeX - 1) / 2) };
 }
 
-export default function DomeGallery({ images = [], fit = 0.5, fitBasis = 'auto', minRadius = 600, maxRadius = Infinity, padFactor = 0.25, overlayBlurColor = '#050816', maxVerticalRotationDeg = DEFAULTS.maxVerticalRotationDeg, dragSensitivity = DEFAULTS.dragSensitivity, enlargeTransitionMs = DEFAULTS.enlargeTransitionMs, segments = DEFAULTS.segments, dragDampening = 2, openedImageWidth = '250px', openedImageHeight = '350px', imageBorderRadius = '30px', openedImageBorderRadius = '30px', grayscale = true }) {
+export default function DomeGallery({ images = [], fit = 0.5, fitBasis = 'auto', minRadius = 600, maxRadius = Infinity, padFactor = 0.25, overlayBlurColor = '#050816', maxVerticalRotationDeg = DEFAULTS.maxVerticalRotationDeg, dragSensitivity = DEFAULTS.dragSensitivity, enlargeTransitionMs = DEFAULTS.enlargeTransitionMs, segments = DEFAULTS.segments, dragDampening = 2, openedImageWidth = '250px', openedImageHeight = '350px', imageBorderRadius = '30px', openedImageBorderRadius = '30px', grayscale = true, onTileClick }) {
     const rootRef = useRef(null); const mainRef = useRef(null); const sphereRef = useRef(null);
     const frameRef = useRef(null); const viewerRef = useRef(null); const scrimRef = useRef(null);
     const focusedElRef = useRef(null); const originalTilePositionRef = useRef(null);
@@ -87,7 +88,10 @@ export default function DomeGallery({ images = [], fit = 0.5, fitBasis = 'auto',
         },
     }, { target: mainRef, eventOptions: { passive: true } });
 
-    const onTileClick = useCallback(e => { if (draggingRef.current || movedRef.current || performance.now() - lastDragEndAt.current < 80 || openingRef.current) return; }, []);
+    const handleTileClick = useCallback(item => e => {
+        if (draggingRef.current || movedRef.current || performance.now() - lastDragEndAt.current < 80 || openingRef.current) return;
+        onTileClick?.(item);
+    }, [onTileClick]);
 
     useEffect(() => () => { document.body.classList.remove('dg-scroll-lock'); }, []);
 
@@ -97,7 +101,7 @@ export default function DomeGallery({ images = [], fit = 0.5, fitBasis = 'auto',
                 <div className="stage"><div ref={sphereRef} className="sphere">
                     {items.map((it, i) => (
                         <div key={`${it.x},${it.y},${i}`} className="item" data-src={it.src} data-offset-x={it.x} data-offset-y={it.y} data-size-x={it.sizeX} data-size-y={it.sizeY} style={{ '--offset-x': it.x, '--offset-y': it.y, '--item-size-x': it.sizeX, '--item-size-y': it.sizeY }}>
-                            <div className="item__image" role="button" tabIndex={0} onClick={onTileClick}><img src={it.src} draggable={false} alt={it.alt} /></div>
+                            <div className="item__image" role="button" tabIndex={0} onClick={handleTileClick(it)}><img src={it.src} draggable={false} alt={it.alt} onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }} /></div>
                         </div>))}
                 </div></div>
                 <div className="overlay" /><div className="overlay overlay--blur" />

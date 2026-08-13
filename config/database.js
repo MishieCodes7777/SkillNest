@@ -79,6 +79,7 @@ async function initDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        await pool.query(`ALTER TABLE courses ADD COLUMN IF NOT EXISTS video_count INTEGER DEFAULT 0`).catch(() => { });
 
         // Mentor profiles table
         await pool.query(`
@@ -227,6 +228,24 @@ async function initDatabase() {
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_enrollments_course ON enrollments(course_id)`);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_enrollments_student ON enrollments(student_id)`);
         console.log("✅ Enrollments table ready");
+
+        // Course reviews — one review per student per course (editable), so a
+        // student rating a course twice updates their existing review instead
+        // of creating duplicates.
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS course_reviews (
+                id SERIAL PRIMARY KEY,
+                course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+                student_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+                comment TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(course_id, student_id)
+            )
+        `);
+        await pool.query(`CREATE INDEX IF NOT EXISTS idx_course_reviews_course ON course_reviews(course_id)`);
+        console.log("✅ Course reviews table ready");
     } catch (err) {
         console.error("❌ Error creating table:", err.message);
     }
