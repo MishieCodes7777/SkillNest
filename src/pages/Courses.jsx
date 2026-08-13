@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import DomeGallery from '../components/DomeGallery';
 
@@ -46,11 +46,13 @@ const PLACEHOLDER_COURSES = [
 
 export default function Courses() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [selected, setSelected] = useState(null);
     const [courses, setCourses] = useState([]);
     const [usingPlaceholders, setUsingPlaceholders] = useState(true);
     const [myEnrollments, setMyEnrollments] = useState([]);
     const [busy, setBusy] = useState(false);
+    const [search, setSearch] = useState('');
 
     const [reviews, setReviews] = useState([]);
     const [avgRating, setAvgRating] = useState(null);
@@ -82,6 +84,11 @@ export default function Courses() {
                 }));
                 setCourses(real);
                 setUsingPlaceholders(false);
+                const wantedId = searchParams.get('id');
+                if (wantedId) {
+                    const match = real.find(c => String(c.id) === wantedId);
+                    if (match) setSelected(match);
+                }
             } else {
                 setCourses(PLACEHOLDER_COURSES);
                 setUsingPlaceholders(true);
@@ -93,6 +100,23 @@ export default function Courses() {
     }, []);
 
     const isEnrolled = selected?.id && myEnrollments.includes(selected.id);
+
+    function openCourse(item) {
+        setSelected(item);
+        if (item.id) setSearchParams({ id: item.id }, { replace: true });
+    }
+
+    function backToGallery() {
+        setSelected(null);
+        setSearchParams({}, { replace: true });
+    }
+
+    const filteredCourses = search.trim()
+        ? courses.filter(c => {
+            const q = search.trim().toLowerCase();
+            return c.title?.toLowerCase().includes(q) || c.category?.toLowerCase().includes(q) || c.mentor?.toLowerCase().includes(q);
+        })
+        : courses;
 
     useEffect(() => {
         setReviews([]); setAvgRating(null); setReviewCount(0); setMyReview(undefined);
@@ -172,21 +196,36 @@ export default function Courses() {
                     <>
                         <div style={{ position: 'absolute', top: 20, left: 0, right: 0, textAlign: 'center', zIndex: 10, pointerEvents: 'none' }}>
                             <h1 style={{ fontSize: 28, marginBottom: 6, paddingLeft: 55 }}>Browse Courses</h1>
-                            <p style={{ color: '#8892b0', fontSize: 14 }}>
+                            <p style={{ color: '#8892b0', fontSize: 14, marginBottom: 14 }}>
                                 {usingPlaceholders ? 'No courses published yet — here are some ideas of what could be taught. Drag to explore.' : 'Drag to explore. Click a course to learn more.'}
                             </p>
+                            <div style={{ pointerEvents: 'auto', maxWidth: 380, margin: '0 auto', position: 'relative' }}>
+                                <span className="material-icons" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 18, color: '#8892b0' }}>search</span>
+                                <input
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    placeholder="Search by skill or mentor name..."
+                                    style={{ width: '100%', padding: '10px 14px 10px 40px', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, color: 'white', fontSize: 13.5, outline: 'none' }}
+                                />
+                            </div>
                         </div>
-                        <DomeGallery
-                            images={courses}
-                            segments={20}
-                            grayscale={false}
-                            overlayBlurColor="#050816"
-                            onTileClick={(item) => setSelected(courses.find(c => c.src === item.src))}
-                        />
+                        {filteredCourses.length === 0 ? (
+                            <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, textAlign: 'center', transform: 'translateY(-50%)', color: '#666', fontSize: 14 }}>
+                                No courses match "{search}"
+                            </div>
+                        ) : (
+                            <DomeGallery
+                                images={filteredCourses}
+                                segments={20}
+                                grayscale={false}
+                                overlayBlurColor="#050816"
+                                onTileClick={(item) => openCourse(filteredCourses.find(c => c.src === item.src) || courses.find(c => c.src === item.src))}
+                            />
+                        )}
                     </>
                 ) : (
                     <div style={{ padding: '80px 40px', maxWidth: 600, margin: '0 auto' }}>
-                        <button onClick={() => setSelected(null)} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', padding: '8px 16px', cursor: 'pointer', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <button onClick={backToGallery} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', padding: '8px 16px', cursor: 'pointer', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span className="material-icons" style={{ fontSize: 18 }}>arrow_back</span> Back to Courses
                         </button>
                         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, overflow: 'hidden', textAlign: 'center' }}>

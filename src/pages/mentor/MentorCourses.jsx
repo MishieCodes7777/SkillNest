@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import MentorLayout from '../../components/MentorLayout';
 import { getCurrentUser } from '../../utils/auth';
 
 const EMPTY_FORM = { title: '', description: '', category: '', difficulty: 'beginner', duration: '', image_url: '', video_count: '' };
 
 export default function MentorCourses() {
+    const navigate = useNavigate();
     const user = getCurrentUser();
     const [courses, setCourses] = useState([]);
     const [showCreate, setShowCreate] = useState(false);
@@ -116,10 +118,11 @@ export default function MentorCourses() {
             ) : (
                 <div style={{ display: 'grid', gap: 14 }}>
                     {courses.map(c => (
-                        <div key={c.id} className="m-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14 }}>
+                        <div key={c.id} className="m-card" onClick={() => navigate(`/courses?id=${c.id}`)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
                             <img
                                 src={c.image_url || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=200&h=200&fit=crop'}
                                 alt={c.title}
+                                title={c.title}
                                 style={{ width: 72, height: 72, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
                                 onError={e => { e.target.src = 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=200&h=200&fit=crop'; }}
                             />
@@ -127,8 +130,8 @@ export default function MentorCourses() {
                                 <h4 style={{ fontSize: 16, marginBottom: 4 }}>{c.title}</h4>
                                 <p style={{ fontSize: 13, color: '#8892b0' }}>{c.category} • {c.difficulty} • {c.duration || 'No duration set'}{c.video_count > 0 ? ` • ${c.video_count} video${c.video_count === 1 ? '' : 's'}` : ''}</p>
                             </div>
-                            <button onClick={() => startEdit(c)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><span className="material-icons" style={{ color: '#8892b0' }}>edit</span></button>
-                            <button onClick={() => deleteCourse(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><span className="material-icons" style={{ color: '#ff4d4d' }}>delete</span></button>
+                            <button onClick={e => { e.stopPropagation(); startEdit(c); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><span className="material-icons" style={{ color: '#8892b0' }}>edit</span></button>
+                            <button onClick={e => { e.stopPropagation(); deleteCourse(c.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><span className="material-icons" style={{ color: '#ff4d4d' }}>delete</span></button>
                         </div>
                     ))}
                 </div>
