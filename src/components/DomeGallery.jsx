@@ -101,7 +101,10 @@ export default function DomeGallery({ images = [], fit = 0.5, fitBasis = 'auto',
                 <div className="stage"><div ref={sphereRef} className="sphere">
                     {items.map((it, i) => (
                         <div key={`${it.x},${it.y},${i}`} className="item" data-src={it.src} data-offset-x={it.x} data-offset-y={it.y} data-size-x={it.sizeX} data-size-y={it.sizeY} style={{ '--offset-x': it.x, '--offset-y': it.y, '--item-size-x': it.sizeX, '--item-size-y': it.sizeY }}>
-                            <div className="item__image" role="button" tabIndex={0} title={it.alt} onClick={handleTileClick(it)}><img src={it.src} draggable={false} alt={it.alt} onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }} /></div>
+                            <div className="item__image" role="button" tabIndex={0} onClick={handleTileClick(it)}>
+                                <img src={it.src} draggable={false} alt={it.alt} onError={e => { e.target.onerror = null; e.target.src = FALLBACK_IMG; }} />
+                                {it.alt && <span className="item__caption">{it.alt}</span>}
+                            </div>
                         </div>))}
                 </div></div>
                 <div className="overlay" /><div className="overlay overlay--blur" />
