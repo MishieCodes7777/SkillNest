@@ -97,10 +97,18 @@ main.sphere-main {
     pointer-events: auto;
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
 
 .item__image:focus {
     outline: none;
+}
+
+.item__image:hover,
+.item__image:focus-visible {
+    transform: translateZ(60px) scale(1.18);
+    z-index: 5;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
 }
 
 .item__image img {
