@@ -70,7 +70,7 @@ export default function Signup() {
                         </div>
                         <span style={{ fontSize: '11px', color: '#555' }}>Min 6 chars, must include a number</span>
                     </div>
-                    <div className="input-group"><label>I want to</label><select value={role} onChange={e => setRole(e.target.value)} style={{ width: '100%', padding: '13px 16px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', background: '#1c1c2e', color: 'white', fontSize: '15px' }}><option value="learner">Learn Skills</option><option value="mentor">Teach Skills</option></select></div>
+                    <div className="input-group"><label>I want to</label><select value={role} onChange={e => setRole(e.target.value)} style={{ width: '100%', padding: '13px 16px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', background: '#1c1c2e', color: 'white', fontSize: '15px' }}><option value="learner" style={{ color: '#111' }}>Learn Skills</option><option value="mentor" style={{ color: '#111' }}>Teach Skills</option></select></div>
                     {error && <div className="auth-error">{error}</div>}
                     <button type="submit" className="submit-btn" disabled={loading}>{loading ? 'Creating...' : 'Sign Up'}</button>
                     <div className="divider"><span>or</span></div>

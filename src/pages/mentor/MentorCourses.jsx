@@ -55,7 +55,7 @@ export default function MentorCourses() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                             <input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Category (e.g. React, Music)" style={inputStyle} />
                             <select value={form.difficulty} onChange={e => setForm({ ...form, difficulty: e.target.value })} style={inputStyle}>
-                                <option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option>
+                                <option value="beginner" style={{ color: '#111' }}>Beginner</option><option value="intermediate" style={{ color: '#111' }}>Intermediate</option><option value="advanced" style={{ color: '#111' }}>Advanced</option>
                             </select>
                             <input value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} placeholder="Duration (e.g. 4 weeks)" style={inputStyle} />
                         </div>
