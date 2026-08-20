@@ -104,6 +104,7 @@ export default function MeetingRoom() {
             socket.on('chat-message', data => setChatMsgs(prev => [...prev, data]));
             socket.on('mic-toggle', data => setRemotePeers(prev => ({ ...prev, [data.from]: { ...prev[data.from], muted: data.muted } })));
             socket.on('cam-toggle', data => setRemotePeers(prev => ({ ...prev, [data.from]: { ...prev[data.from], camOff: !data.camOn } })));
+            socket.on('screen-share-toggle', data => setRemotePeers(prev => ({ ...prev, [data.from]: { ...prev[data.from], sharing: data.sharing } })));
         });
         socket.on('connect_error', (err) => { setConnecting(false); setAuthError(err.message || 'Could not join the meeting.'); });
     }
@@ -161,6 +162,7 @@ export default function MeetingRoom() {
             sharingScreenRef.current = true;
             setSharingScreen(true);
             if (localVideoRef.current) localVideoRef.current.srcObject = screenStream;
+            socketRef.current?.emit('screen-share-toggle', { meetingid: meetId, sharing: true });
             // Fires when the share ends via the browser's own "Stop sharing" control
             // (the tab bar / OS picker bar), not just our in-app button.
             screenTrack.onended = () => stopScreenShare();
@@ -170,6 +172,7 @@ export default function MeetingRoom() {
     }
 
     function stopScreenShare() {
+        if (sharingScreenRef.current) socketRef.current?.emit('screen-share-toggle', { meetingid: meetId, sharing: false });
         const cameraTrack = localStreamRef.current?.getVideoTracks()[0];
         const screenTrack = activeVideoTrackRef.current;
         if (cameraTrack && screenTrack && cameraTrack !== screenTrack) {
@@ -260,6 +263,11 @@ export default function MeetingRoom() {
                     <div style={{ background: '#1F1F1F', borderRadius: 12, position: 'relative', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <video ref={localVideoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12, display: camOn || sharingScreen ? 'block' : 'none' }} />
                         {!camOn && !sharingScreen && <AvatarFallback avatarUrl={myAvatar} name={userName} />}
+                        {sharingScreen && (
+                            <span style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(52,199,89,0.9)', padding: '4px 10px', borderRadius: 4, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <span className="material-icons" style={{ fontSize: 14 }}>screen_share</span> Presenting
+                            </span>
+                        )}
                         <span style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(0,0,0,0.7)', padding: '4px 10px', borderRadius: 4, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                             {!micOn && <span className="material-icons" style={{ fontSize: 14, color: '#ff6b6b' }}>mic_off</span>}
                             {userName} (You)
@@ -334,6 +342,11 @@ function RemoteVideo({ stream, peer }) {
         <div style={{ background: '#1F1F1F', borderRadius: 12, position: 'relative', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <video ref={ref} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12, display: camOff ? 'none' : 'block' }} />
             {camOff && <AvatarFallback avatarUrl={peer?.avatarUrl} />}
+            {peer?.sharing && (
+                <span style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(52,199,89,0.9)', padding: '4px 10px', borderRadius: 4, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span className="material-icons" style={{ fontSize: 14 }}>screen_share</span> Presenting
+                </span>
+            )}
             {peer?.muted && (
                 <span style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(0,0,0,0.7)', borderRadius: '50%', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span className="material-icons" style={{ fontSize: 15, color: '#ff6b6b' }}>mic_off</span>

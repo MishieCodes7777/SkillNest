@@ -193,6 +193,10 @@ io.on("connection", (socket) => {
         const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
         meetUsers.forEach(u => { socket.to(u.connectionId).emit("cam-toggle", { from: socket.id, camOn: data.camOn }); });
     });
+    socket.on("screen-share-toggle", (data) => {
+        const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
+        meetUsers.forEach(u => { socket.to(u.connectionId).emit("screen-share-toggle", { from: socket.id, sharing: data.sharing }); });
+    });
 
     socket.on("disconnect", () => {
         const disUser = userConnections.find(p => p.connectionId === socket.id);
