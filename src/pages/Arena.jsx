@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { getUserEmail, getUserData, saveUserData } from '../utils/auth';
 import { trackActivity } from '../utils/missions';
+import { Link } from 'react-router-dom';
 
 export default function Arena() {
     const arenaKey = 'skillnest_arena_' + getUserEmail();
@@ -21,11 +22,10 @@ export default function Arena() {
         setStep('loading');
         const numQ = level === 'beginner' ? 5 : level === 'intermediate' ? 7 : 8;
         try {
-            const res = await fetch('/api/ai/interview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company: skill, topic: `Generate ${numQ} ${level} MCQ questions for ${skill}. Format as JSON: [{"question":"...","options":["A)...","B)...","C)...","D)..."],"correct":0,"topic":"..."}]` }) });
+            const res = await fetch('/api/ai/quiz', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') }, body: JSON.stringify({ skill, level }) });
             const data = await res.json();
             if (data.success) {
-                const text = data.response; const s = text.indexOf('['); const e = text.lastIndexOf(']') + 1;
-                if (s !== -1 && e > s) { setQuestions(JSON.parse(text.substring(s, e))); setAnswers(new Array(numQ).fill(-1)); setStep('quiz'); setCurrent(0); return; }
+                setQuestions(data.questions); setAnswers(new Array(data.questions.length).fill(-1)); setStep('quiz'); setCurrent(0); return;
             }
         } catch (e) { }
         alert('Could not generate quiz. Try again.'); setStep('landing');
@@ -51,6 +51,8 @@ export default function Arena() {
     return (
         <AppLayout>
             <div style={{ maxWidth: 900, margin: '0 auto', padding: '60px 30px 40px' }}>
+                <Link to="/learning" style={{ display: 'block', padding: 18, marginBottom: 22, background: '#a77bdd18', border: '1px solid #a77bdd44', borderRadius: 12, color: '#d0b4f2' }}>Want a saved skill assessment and an adaptive study path? Open Learning Studio →</Link>
+                <p style={{ color: '#999', fontSize: 12, marginBottom: 20 }}>Arena uses AI-generated practice questions. Answers may need checking; these scores do not train your learning model.</p>
                 {step === 'landing' && (
                     <>
                         <div style={{ textAlign: 'center', marginBottom: 35, paddingLeft: 55 }}><h1 style={{ fontSize: 26, color: '#A855F7' }}>Skill Arena</h1><p style={{ color: '#8892b0', fontSize: 14 }}>Challenge yourself, discover strengths, level up</p></div>

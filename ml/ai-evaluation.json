@@ -1,0 +1,58 @@
+{
+  "evaluatedAt": "2026-10-09T21:41:08.613Z",
+  "limitation": "Four deterministic smoke checks per model. Not a representative accuracy or quality benchmark.",
+  "results": [
+    {
+      "model": "llama-3.1-8b-instant",
+      "case": "JavaScript mutation",
+      "passed": false,
+      "error": "HTTP 404"
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "case": "SQL null counting",
+      "passed": false,
+      "error": "HTTP 404"
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "case": "Conversation context",
+      "passed": false,
+      "error": "HTTP 404"
+    },
+    {
+      "model": "llama-3.1-8b-instant",
+      "case": "Honest uncertainty",
+      "passed": false,
+      "error": "HTTP 404"
+    },
+    {
+      "model": "qwen/qwen3.8-27b",
+      "case": "JavaScript mutation",
+      "passed": true,
+      "latencyMs": 119,
+      "output": "{\"answer\":[1,2]}"
+    },
+    {
+      "model": "qwen/qwen3.8-27b",
+      "case": "SQL null counting",
+      "passed": true,
+      "latencyMs": 115,
+      "output": "{\"answer\": 2}"
+    },
+    {
+      "model": "qwen/qwen3.8-27b",
+      "case": "Conversation context",
+      "passed": true,
+      "latencyMs": 121,
+      "output": "{\"answer\": 5}"
+    },
+    {
+      "model": "qwen/qwen3.8-27b",
+      "case": "Honest uncertainty",
+      "passed": true,
+      "latencyMs": 107,
+      "output": "{\"answer\": null}"
+    }
+  ]
+}

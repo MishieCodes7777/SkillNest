@@ -13,7 +13,7 @@ export default function Interview() {
         if (!company) { alert('Enter a company name'); return; }
         setLoading(true); setResult('');
         try {
-            const res = await fetch('/api/ai/interview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, topic }) });
+            const res = await fetch('/api/ai/interview', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') }, body: JSON.stringify({ company, topic }) });
             const data = await res.json();
             if (data.success) setResult(data.response);
             else setResult('Could not generate. Try again.');
@@ -37,7 +37,8 @@ export default function Interview() {
                     </div>
                 )}
 
-                {loading && <div style={{ textAlign: 'center', padding: 50, color: '#888' }}>AI is fetching interview data...</div>}
+                <p style={{ color: '#999', fontSize: 12, marginBottom: 15 }}>Generated practice material. Company-specific questions and hiring formats are not independently verified.</p>
+                {loading && <div style={{ textAlign: 'center', padding: 50, color: '#888' }}>AI is preparing practice material...</div>}
 
                 {result && (
                     <div>

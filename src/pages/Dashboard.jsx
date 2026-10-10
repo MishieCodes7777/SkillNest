@@ -5,9 +5,12 @@ import { getCurrentUser, getUserData, saveUserData, getUserEmail } from '../util
 import { checkAndUnlockBadges, getUserBadges, ALL_BADGES, RARITY_COLORS } from '../utils/badges';
 import { getDailyMissions, getMissionProgress } from '../utils/missions';
 import '../styles/dashboard.css';
+import { api } from '../utils/api';
 
 export default function Dashboard() {
     const [data, setData] = useState(getUserData());
+    const [learning, setLearning] = useState(null);
+    const [learningError, setLearningError] = useState('');
     const user = getCurrentUser();
     const userName = user?.name || 'User';
     const email = getUserEmail();
@@ -18,6 +21,7 @@ export default function Dashboard() {
     const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
     useEffect(() => {
+        api('/api/learning/overview').then(setLearning).catch(e => setLearningError(e.message));
         const d = getUserData();
         const today = new Date().toDateString();
         if (d.lastVisit !== today) {
@@ -34,13 +38,14 @@ export default function Dashboard() {
         checkAndUnlockBadges(email, d);
     }, []);
 
-    const todayFocus = getTodayFocus(data);
-    const aiAdvice = getAIAdvice(data);
+    const todayFocus = getTodayFocus(learning);
+    const aiAdvice = learningError ? 'Learning progress could not be loaded. Open Learning Studio to try again.' : todayFocus.reason;
     const recentBadges = badgeData.unlocked.slice(-4).reverse().map(b => ALL_BADGES.find(a => a.id === b.id)).filter(Boolean);
 
     return (
         <AppLayout>
             <div className="dash-container">
+                <Link to="/learning" style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'center', padding: '20px 24px', marginBottom: 22, border: '1px solid #a77bdd55', borderRadius: 14, background: 'linear-gradient(120deg,#a16ed422,#17172d)' }}><div><strong style={{ color: '#d2b7f4' }}>Your Learning Studio is ready</strong><p style={{ fontSize: 13, color: '#aaa0bb', marginTop: 5 }}>Check your skills. Follow a path shaped by your progress.</p></div><span style={{ color: '#c5a4ef' }}>Explore →</span></Link>
                 {/* === AI DAILY BRIEF (Information only, NO checkboxes) === */}
                 <div className="daily-brief">
                     <div className="db-header">
@@ -54,10 +59,10 @@ export default function Dashboard() {
                         <div className="db-item"><span className="db-icon">&#127942;</span><div><strong>Daily XP Goal</strong><p>150 XP</p></div></div>
                     </div>
                     <div className="db-recommendation">
-                        <strong>AI Recommendation</strong>
+                        <strong>Practice suggestion</strong>
                         <p>{todayFocus.reason}</p>
                     </div>
-                    <Link to="/arena" className="db-cta-btn">Start Learning</Link>
+                    <Link to="/learning" className="db-cta-btn">Start Learning</Link>
                 </div>
 
                 {/* === STATS === */}
@@ -92,7 +97,7 @@ export default function Dashboard() {
 
                     {/* === AI COACH === */}
                     <div className="dash-card ai-coach-card">
-                        <h3><span className="material-icons">psychology</span> AI Coach</h3>
+                        <h3><span className="material-icons">psychology</span> Learning Coach</h3>
                         <p className="coach-msg">{aiAdvice}</p>
                         <div className="coach-actions">
                             <Link to="/ai-mentor" className="coach-btn">Ask AI Mentor</Link>
@@ -106,10 +111,10 @@ export default function Dashboard() {
                     <div className="dash-card focus-card">
                         <h3><span className="material-icons">center_focus_strong</span> Today's Focus</h3>
                         <div className="focus-topic">{todayFocus.topic}</div>
-                        <div className="focus-confidence">Learning Confidence: <span>{todayFocus.confidence}%</span></div>
+                        <div className="focus-confidence">Recent answer accuracy: <span>{todayFocus.confidence === null ? 'Not assessed' : `${todayFocus.confidence}%`}</span></div>
                         <div className="focus-reason-text">{todayFocus.detail}</div>
                         <div className="focus-actions">
-                            <Link to="/arena" className="focus-btn">Practice</Link>
+                            <Link to="/learning" className="focus-btn">Practice</Link>
                             <Link to="/ai-mentor" className="focus-btn">Ask AI</Link>
                         </div>
                     </div>
@@ -183,28 +188,20 @@ function StatCard({ icon, value, label }) {
     return <div className="stat-card"><div className="stat-icon" dangerouslySetInnerHTML={{ __html: icon }} /><div className="stat-value">{value}</div><div className="stat-label">{label}</div></div>;
 }
 
-function getTodayFocus(data) {
-    if (data.skills.length > 0) {
-        const skill = data.skills[data.skills.length - 1];
-        const confidence = Math.floor(Math.random() * 30 + 35);
+function getTodayFocus(learning) {
+    const topic = learning?.topics.filter(t => t.attempts > 0).sort((a, b) => a.accuracy - b.accuracy)[0];
+    if (topic) {
         return {
-            topic: skill,
-            confidence,
-            reason: `Based on your activity, focus on ${skill} today. Completing a Skill Arena challenge could increase your confidence by ~12%.`,
-            detail: `Your ${skill} confidence is ${confidence}%. Practice and quizzes will help strengthen this area.`
+            topic: topic.name,
+            confidence: topic.accuracy,
+            reason: `Review ${topic.name}: ${topic.accuracy}% of your recent answers were correct. Your Learning Studio has source-linked practice material.`,
+            detail: `Based on ${topic.attempts} saved answers across ${topic.distinctQuestions} distinct questions. This is a practice signal, not a mastery rating.`
         };
     }
     return {
         topic: 'Get Started',
-        confidence: 0,
-        reason: 'Generate an AI Roadmap to get personalized topic recommendations. Your learning journey starts with one step.',
-        detail: 'No topics tracked yet. Start by generating a roadmap or completing an arena challenge.'
+        confidence: null,
+        reason: 'Take a short Learning Studio skill check to find a useful starting point.',
+        detail: 'No saved assessment evidence yet. Your suggestions will update after a skill check.'
     };
-}
-
-function getAIAdvice(data) {
-    if (data.sessions === 0 && data.skills.length === 0) return "Welcome to SkillNest! Start by generating an AI Roadmap or joining a live session. The more you learn, the smarter your recommendations become.";
-    if (data.skills.length > 0 && data.streak > 3) return `Excellent consistency with your ${data.streak}-day streak! Your focus today should be ${data.skills[0]}. A Skill Arena challenge will solidify your understanding and earn you XP.`;
-    if (data.skills.length > 0) return `You're learning ${data.skills.join(', ')}. Try a Skill Arena challenge to identify knowledge gaps. AI detects areas where targeted practice yields the fastest improvement.`;
-    return "Join a live session or generate a roadmap to activate personalized AI coaching. Every activity you complete makes your recommendations more accurate.";
 }

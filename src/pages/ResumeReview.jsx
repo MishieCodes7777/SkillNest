@@ -6,6 +6,7 @@ export default function ResumeReview() {
     const [step, setStep] = useState('upload');
     const [feedback, setFeedback] = useState(null);
     const [fileName, setFileName] = useState('');
+    const [error, setError] = useState('');
 
     function handleFile(e) {
         const file = e.target.files[0];
@@ -24,8 +25,9 @@ export default function ResumeReview() {
     }
 
     async function analyze(content) {
+        setError('');
         setStep('loading');
-        const cleaned = content.replace(/[^\x20-\x7E\n\r]/g, ' ');
+        const cleaned = content.slice(0, 6000);
         let fb;
         try {
             const res = await fetch('/api/ai/resume-review', {
@@ -37,8 +39,9 @@ export default function ResumeReview() {
             if (!data.success) throw new Error(data.message);
             fb = data.feedback;
         } catch (e) {
-            // AI unavailable — fall back to keyword-based scoring rather than a dead end
-            fb = performAnalysis(cleaned.toLowerCase());
+            setError(e.message || 'Resume feedback is temporarily unavailable. Please try again.');
+            setStep('upload');
+            return;
         }
         setFeedback(fb);
         setStep('results');
@@ -65,6 +68,8 @@ export default function ResumeReview() {
     return (
         <AppLayout>
             <div style={{ maxWidth: 800, margin: '0 auto', padding: '60px 30px 40px' }}>
+                {error && <p role="alert" style={{ color: '#efa894', marginBottom: 20 }}>{error}</p>}
+                <p style={{ color: '#999', fontSize: 12, marginBottom: 15 }}>Feedback is an AI-generated review, not an ATS score or hiring prediction. Only the first 6,000 characters are reviewed.</p>
                 <div style={{ textAlign: 'center', marginBottom: 35, paddingLeft: 55 }}><h1 style={{ fontSize: 24, marginBottom: 6 }}>AI Resume Reviewer</h1><p style={{ color: '#8892b0', fontSize: 14 }}>Upload your resume and get instant feedback</p></div>
 
                 {step === 'upload' && (

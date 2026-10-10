@@ -1,0 +1,46 @@
+{
+  "name": "SkillNest next-answer logistic model",
+  "version": "1.0.0",
+  "dataset": "ASSISTments public example distributed by CAHLR/pyBKT-examples",
+  "source": "https://raw.githubusercontent.com/CAHLR/pyBKT-examples/master/data/as.csv",
+  "sha256": "fe0552bac5cd7f08e6602ae438f9194087fd0159d34ef715271b22c6becae7ec",
+  "features": [
+    "bias",
+    "smoothed_past_accuracy",
+    "log_past_attempts",
+    "last_10_accuracy"
+  ],
+  "weights": [
+    -0.5520641813480345,
+    1.2257685534338294,
+    -0.5212026944149336,
+    1.533148905597539
+  ],
+  "metrics": {
+    "model": {
+      "accuracy": 0.7148257636835976,
+      "brier": 0.19390092260999547,
+      "logLoss": 0.5739750040937608,
+      "examples": 55815
+    },
+    "constantBaseline": {
+      "accuracy": 0.6570993460539282,
+      "brier": 0.22534322530131082,
+      "logLoss": 0.6429929735152979,
+      "examples": 55815
+    },
+    "trainingExamples": 215787,
+    "validationExamples": 24417,
+    "learners": {
+      "train": 2960,
+      "validation": 390,
+      "test": 813
+    }
+  },
+  "limitations": [
+    "External mathematics data; programming-domain transfer has not been validated.",
+    "Next-answer correctness is not a validated measure of skill mastery.",
+    "Learner-disjoint holdout; previous observed answers within each held-out sequence are available at prediction time.",
+    "Predictions are informational only; curriculum sequencing uses observed answers and prerequisites."
+  ]
+}

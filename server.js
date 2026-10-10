@@ -52,6 +52,9 @@ app.use(cors({
 // it runs first; body-parser skips re-parsing a body it's already read.
 app.use("/api/mentor/profile", express.json({ limit: "3mb" }));
 app.use("/api/auth/avatar", express.json({ limit: "3mb" }));
+app.use('/api/ai/chat', express.json({ limit: '96kb' }));
+app.use('/api/ai/resume-review', express.json({ limit: '48kb' }));
+app.use('/api/research/confirm', express.json({ limit: '96kb' }));
 
 // 4. Body parser with size limit (10kb max)
 app.use(express.json({ limit: "10kb" }));
@@ -76,6 +79,9 @@ app.use("/api/auth/forgot-password", authLimiter);
 app.use("/api/auth/reset-password", authLimiter);
 
 // ===== API ROUTES =====
+app.get('/api/health', (req, res) => res.status(require('./config/database').initialized ? 200 : 503).json({
+    success: Boolean(require('./config/database').initialized), version: 'learning-studio-1', service: 'SkillNest'
+}));
 const authRoutes = require("./routes/auth");
 const aiRoutes = require("./routes/ai");
 const coursesRoutes = require("./routes/courses");
@@ -98,6 +104,8 @@ app.use("/api/notifications", notificationsRoutes);
 app.use("/api/connections", connectionsRoutes);
 app.use("/api/messages", messagesRoutes);
 app.use("/api/turn-credentials", turnRoutes);
+app.use('/api/learning', require('./routes/learning'));
+app.use('/api/research', require('./routes/research'));
 
 // ===== STATIC FILES =====
 const distPath = path.join(__dirname, "dist");

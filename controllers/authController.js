@@ -114,7 +114,7 @@ async function login(req, res) {
 
         // Check if user exists
         const result = await pool.query(
-            "SELECT id, name, email, password, role, created_at FROM users WHERE email = $1",
+            "SELECT id, name, username, email, password, role, created_at FROM users WHERE email = $1",
             [email]
         );
 

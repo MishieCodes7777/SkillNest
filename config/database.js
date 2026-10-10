@@ -246,11 +246,14 @@ async function initDatabase() {
         `);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_course_reviews_course ON course_reviews(course_id)`);
         console.log("✅ Course reviews table ready");
+        await require('./learningSchema')(pool);
+        console.log('✅ Learning and research tables ready');
+        pool.initialized = true;
     } catch (err) {
         console.error("❌ Error creating table:", err.message);
     }
 }
 
-initDatabase();
+pool.ready = initDatabase();
 
 module.exports = pool;

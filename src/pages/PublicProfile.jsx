@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import CommunityFeed from '../components/CommunityFeed';
 import FollowButton from '../components/FollowButton';
+import Publications from '../components/Publications';
 import { getCurrentUser } from '../utils/auth';
 
 function safeParseArray(val) { if (Array.isArray(val)) return val; try { return JSON.parse(val || '[]'); } catch (e) { return []; } }
@@ -71,6 +72,7 @@ export default function PublicProfile() {
                 )}
             </div>
 
+            <Publications userId={user.id} />
             <CommunityFeed filterUserId={user.id} />
         </AppLayout>
     );

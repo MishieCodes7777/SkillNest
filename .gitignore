@@ -3,3 +3,7 @@ node_modules/
 tempCodeRunnerFile.js
 tempCodeRunnerFile.zip
 dist/
+ml/data/
+ml/__pycache__/
+.preview-logs/
+test-results/

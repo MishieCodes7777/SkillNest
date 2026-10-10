@@ -10,6 +10,7 @@ const mentorNav = [
     { path: '/mentor/sessions', icon: 'videocam', label: 'Sessions' },
     { path: '/mentor/community', icon: 'forum', label: 'Community' },
     { path: '/mentor/resources', icon: 'folder', label: 'Resources' },
+    { path: '/mentor/research', icon: 'science', label: 'Research Profile' },
     { path: '/mentor/earnings', icon: 'payments', label: 'Earnings' },
     { path: '/mentor/settings', icon: 'settings', label: 'Settings' },
 ];

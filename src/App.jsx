@@ -23,6 +23,8 @@ const Community = lazy(() => import('./pages/Community'));
 const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const BecomeMentor = lazy(() => import('./pages/BecomeMentor'));
 const AdminMentorApplications = lazy(() => import('./pages/AdminMentorApplications'));
+const LearningHub = lazy(() => import('./pages/LearningHub'));
+const ResearchProfile = lazy(() => import('./pages/ResearchProfile'));
 
 // Mentor pages
 const MentorDashboard = lazy(() => import('./pages/mentor/MentorDashboard'));
@@ -53,6 +55,10 @@ function App() {
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password/:token" element={<ResetPassword />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/learning" element={<LearningHub />} />
+                    <Route path="/preview" element={<LearningHub preview />} />
+                    <Route path="/preview/research" element={<ResearchProfile preview />} />
+                    <Route path="/mentor/research" element={<ResearchProfile />} />
                     <Route path="/sessions" element={<Sessions />} />
                     <Route path="/messages" element={<Messages />} />
                     <Route path="/profile" element={<Profile />} />
