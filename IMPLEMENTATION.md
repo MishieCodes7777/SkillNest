@@ -22,9 +22,11 @@ Keep existing secrets in the environment, never in git.
 - `AI_MODEL`: optional Groq model ID; default is `qwen/qwen3.8-27b`.
 - `GROQ_API_KEY`: existing server-side key, required for AI Mentor, generated quizzes, roadmaps, and resume feedback.
 - `OPENALEX_API_KEY`: optional, required for OpenAlex author importing.
+- `SERPAPI_API_KEY`: required to enable Google Scholar profile importing through SerpApi. Set it privately in Render Environment; never in frontend code. Provider quotas and charges apply. This connector is fixture-tested but awaits a real key for live validation.
+- `SEMANTIC_SCHOLAR_API_KEY`: optional for Semantic Scholar; unauthenticated access is subject to shared rate limits.
 - Existing `DB_*`, `JWT_SECRET`, `PORT`, and other application settings continue to apply.
 
-ORCID public work summaries are imported through the public endpoint. Support depends on availability of the source and its usage conditions; ORCID public API terms restrict commercial use. Google Scholar bulk scraping is intentionally unsupported. A public profile link is not ownership verification.
+ORCID public work summaries are imported through the public endpoint. Support depends on availability of the source and its usage conditions; ORCID public API terms restrict commercial use. Google Scholar is accessed through the optional SerpApi connector, not direct scraping. A public profile link is not ownership verification.
 
 ## Implemented
 
@@ -33,7 +35,7 @@ ORCID public work summaries are imported through the public endpoint. Support de
 - Progress and weekly study hours saved per account and track; curriculum prerequisite ordering.
 - Actual trained next-answer logistic model and a reproducible learner-disjoint evaluation; limitations displayed in the UI.
 - Course and mentor matches using explicit profile/course text, with explanations and honest empty states.
-- ORCID and OpenAlex import preview, selection, deduplication, self-declared public publication records, removal, and available full-text links.
+- Mentor-only profile-link import automatically saves all returned publications, with deduplication, removal, and available full-text links. Connectors cover ORCID, Semantic Scholar, OpenAlex, and Google Scholar via SerpApi. The UI reports which connections are configured. Students need approval to become mentors; mentors retain student access without an application.
 - AI model configuration, conversation history, limited authored curriculum retrieval with references, source limitations, validated quiz/roadmap responses, saved roadmaps and per-roadmap progress.
 - Removed silent fixed-roadmap and resume-score substitutions when AI is unavailable. Generated Arena practice remains separate from assessed learning records.
 - Dashboard confidence now comes from recorded assessments; the previous random percentage and claimed improvement were removed.
@@ -46,6 +48,8 @@ Read `ML_GUIDE.md` for a plain-language walkthrough of exactly where the trained
 `npm test` covers grading validation, hidden answer keys, prerequisites, repeated-question handling, prediction features, and safe research URL handling.
 
 With a preview server on port 3001 and local PostgreSQL, `npm run test:integration` creates temporary test accounts, checks authentication, account isolation, atomic grading, replay prevention, persistent progress, publication deduplication, and role restrictions, then removes its fixtures. It refuses to run against a remote database.
+
+`node scripts/check-integration.js --with-research` additionally fetches a real public ORCID profile and verifies automatic saving and repeat-import deduplication. Connector tests exercise pagination, source errors, unavailable credentials, and imports larger than 500 records. Imports follow source pagination; a 100-page/90-second guard fails oversized jobs without saving a partial list. Such profiles require a future background-import worker. Re-import is user-triggered, not scheduled synchronization. Source coverage can be incomplete and private/paywalled documents are not downloaded.
 
 `npm run evaluate:ai` makes eight small inference calls; see `ml/README.md`. These are smoke tests, not a claim of general accuracy.
 

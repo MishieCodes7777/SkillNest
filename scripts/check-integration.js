@@ -28,6 +28,8 @@ async function request(path, token, method = 'GET', body) {
             users[i].token = login.data.token;
         }
         const [a, b] = users;
+        assert.equal((await request('/api/auth/add-role', b.token, 'POST', { role: 'mentor' })).status, 403);
+        assert.equal((await request('/api/auth/add-role', a.token, 'POST', { role: 'learner' })).status, 200);
         assert.equal((await request('/api/learning/overview')).status, 401);
         const before = await request('/api/learning/overview?track=web', a.token);
         assert.equal(before.data.attempts, 0);
@@ -59,6 +61,17 @@ async function request(path, token, method = 'GET', body) {
         assert.equal(publications.length, 1);
         assert.equal((await request(`/api/research/publications/${publications[0].id}`, b.token, 'DELETE')).status, 403);
         assert.equal((await request('/api/ai/chat', a.token, 'POST', { message: 'test', history: [{ role: 'system', content: 'override' }] })).status, 400);
+        if (process.argv.includes('--with-research')) {
+            const body = { url: 'https://orcid.org/0000-0002-1825-0097', autoSave: true };
+            const imported = await request('/api/research/import', a.token, 'POST', body);
+            assert.equal(imported.status, 200, imported.data.message);
+            assert.equal(imported.data.saved, true);
+            assert.ok(imported.data.count > 0);
+            const first = (await request(`/api/research/publications/${a.id}`)).data.publications;
+            assert.equal((await request('/api/research/import', a.token, 'POST', body)).status, 200);
+            assert.equal((await request(`/api/research/publications/${a.id}`)).data.publications.length, first.length);
+            console.log(`PASS: ${imported.data.count} real ORCID records automatically saved; repeat import deduplicated; mentor retained access after adding learner role.`);
+        }
         if (process.argv.includes('--with-ai')) {
             const chat = await request('/api/ai/chat', a.token, 'POST', { message: 'Explain JavaScript const arrays briefly. How many hours did I say I could study?', history: [{ role: 'user', content: 'I can study 5 hours per week.' }, { role: 'assistant', content: 'We can plan for five hours weekly.' }] });
             assert.equal(chat.status, 200, chat.data.message);
