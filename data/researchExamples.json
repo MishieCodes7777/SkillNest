@@ -1,0 +1,4 @@
+[
+  { "id": "example-1", "external_id": "example-1", "title": "Attention Is All You Need", "year": 2017, "authors": "Ashish Vaswani and colleagues", "source": "Example publication", "url": "https://arxiv.org/abs/1706.03762", "full_text_url": "https://arxiv.org/pdf/1706.03762", "topics": ["Natural language processing", "Transformers"] },
+  { "id": "example-2", "external_id": "example-2", "title": "Deep Residual Learning for Image Recognition", "year": 2015, "authors": "Kaiming He and colleagues", "source": "Example publication", "url": "https://arxiv.org/abs/1512.03385", "full_text_url": "https://arxiv.org/pdf/1512.03385", "topics": ["Computer vision", "Deep learning"] }
+]

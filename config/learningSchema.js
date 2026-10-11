@@ -32,5 +32,16 @@ module.exports = async function learningSchema(pool) {
         url TEXT NOT NULL, full_text_url TEXT, topics JSONB NOT NULL DEFAULT '[]', source TEXT NOT NULL,
         profile_url TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE(user_id, external_id)
       );
+      ALTER TABLE learning_plans ADD COLUMN IF NOT EXISTS ml_pilot BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE learning_sessions ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'assessment';
+      ALTER TABLE learning_sessions ADD COLUMN IF NOT EXISTS policy TEXT NOT NULL DEFAULT 'curriculum-v1';
+      CREATE TABLE IF NOT EXISTS learning_forecasts (
+        session_id UUID NOT NULL REFERENCES learning_sessions(id) ON DELETE CASCADE,
+        question_id TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        model_version TEXT NOT NULL, probability DOUBLE PRECISION NOT NULL CHECK(probability BETWEEN 0 AND 1),
+        baseline_probability DOUBLE PRECISION NOT NULL CHECK(baseline_probability BETWEEN 0 AND 1),
+        features JSONB NOT NULL, prior_attempts INTEGER NOT NULL, seen_before BOOLEAN NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(session_id,question_id)
+      );
     `);
 };

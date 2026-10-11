@@ -1,24 +1,662 @@
 [
- {"id":"js-values-1","topic":"js-values","version":1,"difficulty":1,"question":"What happens after const items = []; items.push(1);?","options":["items becomes [1]","A reassignment error occurs","items stays empty","items becomes 1"],"correct":0,"explanation":"const protects the binding. The array itself can still be changed."},
- {"id":"js-values-2","topic":"js-values","version":1,"difficulty":1,"question":"What is the result of 5 === '5' in JavaScript?","options":["true","false","undefined","An exception"],"correct":1,"explanation":"Strict equality does not convert the string to a number."},
- {"id":"js-functions-1","topic":"js-functions","version":1,"difficulty":1,"question":"What does a JavaScript function return if it reaches its end without return?","options":["null","0","undefined","false"],"correct":2,"explanation":"A function with no returned value returns undefined."},
- {"id":"js-functions-2","topic":"js-functions","version":1,"difficulty":2,"question":"What can a closure retain access to?","options":["Only global variables","Variables from its lexical environment","Every variable in the program","Only its own parameters"],"correct":1,"explanation":"Closures retain access to the lexical environment where the function was created."},
- {"id":"js-arrays-1","topic":"js-arrays","version":1,"difficulty":1,"question":"What does [1, 2, 3].map(x => x * 2) return?","options":["[1, 2, 3]","6","[2, 4, 6]","undefined"],"correct":2,"explanation":"map builds a new array containing the result for each element."},
- {"id":"js-arrays-2","topic":"js-arrays","version":1,"difficulty":2,"question":"Which expression keeps only values greater than 3?","options":["values.map(x => x > 3)","values.filter(x => x > 3)","values.find(x => x > 3)","values.every(x => x > 3)"],"correct":1,"explanation":"filter returns all matching elements. find returns only the first match."},
- {"id":"js-async-1","topic":"js-async","version":1,"difficulty":1,"question":"What does an async function always return to its caller?","options":["A string","A Promise","undefined","A callback"],"correct":1,"explanation":"An async function wraps its return value in a promise."},
- {"id":"js-async-2","topic":"js-async","version":1,"difficulty":2,"question":"Inside an async function, what does await do?","options":["Blocks every JavaScript task","Suspends that function until the awaited promise settles","Makes the operation run on a new CPU thread","Guarantees the promise succeeds"],"correct":1,"explanation":"await suspends the async function, not the entire JavaScript thread."},
- {"id":"react-state-1","topic":"react-state","version":1,"difficulty":1,"question":"Which update correctly appends to an array in React state?","options":["items.push(newItem)","setItems(prev => [...prev, newItem])","items = newItem","delete items[0]"],"correct":1,"explanation":"Create a new array and use the state setter so React can render the update."},
- {"id":"react-state-2","topic":"react-state","version":1,"difficulty":2,"question":"How should you increment state twice based on its previous value?","options":["Call setCount(count + 1) twice","Call setCount(c => c + 1) twice","Assign count = count + 2","Call count.push(2)"],"correct":1,"explanation":"Functional updates are applied in sequence to the pending state."},
- {"id":"py-values-1","topic":"py-values","version":1,"difficulty":1,"question":"What is 7 // 2 in Python?","options":["3.5","4","3","2"],"correct":2,"explanation":"For these positive operands, floor division gives 3."},
- {"id":"py-values-2","topic":"py-values","version":1,"difficulty":1,"question":"Which Python value is immutable?","options":["A list","A dictionary","A set","A string"],"correct":3,"explanation":"Strings cannot be modified in place; operations create new strings."},
- {"id":"py-collections-1","topic":"py-collections","version":1,"difficulty":1,"question":"Which collection automatically removes duplicate elements?","options":["list","tuple","set","str"],"correct":2,"explanation":"A set stores distinct elements."},
- {"id":"py-collections-2","topic":"py-collections","version":1,"difficulty":2,"question":"What does {'name': 'Ada'}.get('age', 0) return?","options":["None","0","'age'","A KeyError"],"correct":1,"explanation":"dict.get returns the supplied default when the key is missing."},
- {"id":"py-functions-1","topic":"py-functions","version":1,"difficulty":1,"question":"A Python function finishes without return. What value does its caller receive?","options":["False","0","None","An empty string"],"correct":2,"explanation":"Functions without an explicit return value return None."},
- {"id":"py-functions-2","topic":"py-functions","version":1,"difficulty":2,"question":"When is the default list in def f(items=[]): created?","options":["Each time f is called","When the function is defined","Only when append runs","When the program exits"],"correct":1,"explanation":"Defaults are evaluated once at definition time, so a mutable default can be shared across calls."},
- {"id":"sql-select-1","topic":"sql-select","version":1,"difficulty":1,"question":"Which condition selects rows with a missing email?","options":["email = NULL","email IS NULL","email == NULL","email = 'NULL'"],"correct":1,"explanation":"SQL uses IS NULL to test for null values."},
- {"id":"sql-select-2","topic":"sql-select","version":1,"difficulty":1,"question":"Which clause guarantees a result sorted by score from largest to smallest?","options":["GROUP BY score","WHERE score DESC","ORDER BY score DESC","SELECT DESC score"],"correct":2,"explanation":"ORDER BY specifies result ordering; DESC requests descending order."},
- {"id":"sql-joins-1","topic":"sql-joins","version":1,"difficulty":1,"question":"Which join retains all left-table rows even when the right table has no match?","options":["INNER JOIN","LEFT JOIN","CROSS JOIN","Only a self join"],"correct":1,"explanation":"LEFT JOIN keeps unmatched left rows with nulls for right-side columns."},
- {"id":"sql-joins-2","topic":"sql-joins","version":1,"difficulty":2,"question":"One customer matches three orders. How many rows does their INNER JOIN produce for that customer?","options":["1","2","3","0"],"correct":2,"explanation":"Each matching customer-order pair produces a result row."},
- {"id":"sql-group-1","topic":"sql-group","version":1,"difficulty":1,"question":"Which clause filters groups after aggregation?","options":["WHERE","HAVING","ORDER BY","LIMIT"],"correct":1,"explanation":"HAVING filters grouped results; WHERE filters input rows."},
- {"id":"sql-group-2","topic":"sql-group","version":1,"difficulty":2,"question":"A column has values 2, NULL, 5. What does COUNT(column) return?","options":["3","2","1","NULL"],"correct":1,"explanation":"COUNT(column) counts only non-null values, so the result is 2."}
+  {
+    "id": "js-values-1",
+    "topic": "js-values",
+    "version": 1,
+    "difficulty": 1,
+    "question": "What happens after const items = []; items.push(1);?",
+    "options": [
+      "items becomes [1]",
+      "A reassignment error occurs",
+      "items stays empty",
+      "items becomes 1"
+    ],
+    "correct": 0,
+    "explanation": "const protects the binding. The array itself can still be changed."
+  },
+  {
+    "id": "js-values-2",
+    "topic": "js-values",
+    "version": 1,
+    "difficulty": 1,
+    "question": "What is the result of 5 === '5' in JavaScript?",
+    "options": [
+      "true",
+      "false",
+      "undefined",
+      "An exception"
+    ],
+    "correct": 1,
+    "explanation": "Strict equality does not convert the string to a number."
+  },
+  {
+    "id": "js-functions-1",
+    "topic": "js-functions",
+    "version": 1,
+    "difficulty": 1,
+    "question": "What does a JavaScript function return if it reaches its end without return?",
+    "options": [
+      "null",
+      "0",
+      "undefined",
+      "false"
+    ],
+    "correct": 2,
+    "explanation": "A function with no returned value returns undefined."
+  },
+  {
+    "id": "js-functions-2",
+    "topic": "js-functions",
+    "version": 1,
+    "difficulty": 2,
+    "question": "What can a closure retain access to?",
+    "options": [
+      "Only global variables",
+      "Variables from its lexical environment",
+      "Every variable in the program",
+      "Only its own parameters"
+    ],
+    "correct": 1,
+    "explanation": "Closures retain access to the lexical environment where the function was created."
+  },
+  {
+    "id": "js-arrays-1",
+    "topic": "js-arrays",
+    "version": 1,
+    "difficulty": 1,
+    "question": "What does [1, 2, 3].map(x => x * 2) return?",
+    "options": [
+      "[1, 2, 3]",
+      "6",
+      "[2, 4, 6]",
+      "undefined"
+    ],
+    "correct": 2,
+    "explanation": "map builds a new array containing the result for each element."
+  },
+  {
+    "id": "js-arrays-2",
+    "topic": "js-arrays",
+    "version": 1,
+    "difficulty": 2,
+    "question": "Which expression keeps only values greater than 3?",
+    "options": [
+      "values.map(x => x > 3)",
+      "values.filter(x => x > 3)",
+      "values.find(x => x > 3)",
+      "values.every(x => x > 3)"
+    ],
+    "correct": 1,
+    "explanation": "filter returns all matching elements. find returns only the first match."
+  },
+  {
+    "id": "js-async-1",
+    "topic": "js-async",
+    "version": 1,
+    "difficulty": 1,
+    "question": "What does an async function always return to its caller?",
+    "options": [
+      "A string",
+      "A Promise",
+      "undefined",
+      "A callback"
+    ],
+    "correct": 1,
+    "explanation": "An async function wraps its return value in a promise."
+  },
+  {
+    "id": "js-async-2",
+    "topic": "js-async",
+    "version": 1,
+    "difficulty": 2,
+    "question": "Inside an async function, what does await do?",
+    "options": [
+      "Blocks every JavaScript task",
+      "Suspends that function until the awaited promise settles",
+      "Makes the operation run on a new CPU thread",
+      "Guarantees the promise succeeds"
+    ],
+    "correct": 1,
+    "explanation": "await suspends the async function, not the entire JavaScript thread."
+  },
+  {
+    "id": "react-state-1",
+    "topic": "react-state",
+    "version": 1,
+    "difficulty": 1,
+    "question": "Which update correctly appends to an array in React state?",
+    "options": [
+      "items.push(newItem)",
+      "setItems(prev => [...prev, newItem])",
+      "items = newItem",
+      "delete items[0]"
+    ],
+    "correct": 1,
+    "explanation": "Create a new array and use the state setter so React can render the update."
+  },
+  {
+    "id": "react-state-2",
+    "topic": "react-state",
+    "version": 1,
+    "difficulty": 2,
+    "question": "How should you increment state twice based on its previous value?",
+    "options": [
+      "Call setCount(count + 1) twice",
+      "Call setCount(c => c + 1) twice",
+      "Assign count = count + 2",
+      "Call count.push(2)"
+    ],
+    "correct": 1,
+    "explanation": "Functional updates are applied in sequence to the pending state."
+  },
+  {
+    "id": "py-values-1",
+    "topic": "py-values",
+    "version": 1,
+    "difficulty": 1,
+    "question": "What is 7 // 2 in Python?",
+    "options": [
+      "3.5",
+      "4",
+      "3",
+      "2"
+    ],
+    "correct": 2,
+    "explanation": "For these positive operands, floor division gives 3."
+  },
+  {
+    "id": "py-values-2",
+    "topic": "py-values",
+    "version": 1,
+    "difficulty": 1,
+    "question": "Which Python value is immutable?",
+    "options": [
+      "A list",
+      "A dictionary",
+      "A set",
+      "A string"
+    ],
+    "correct": 3,
+    "explanation": "Strings cannot be modified in place; operations create new strings."
+  },
+  {
+    "id": "py-collections-1",
+    "topic": "py-collections",
+    "version": 1,
+    "difficulty": 1,
+    "question": "Which collection automatically removes duplicate elements?",
+    "options": [
+      "list",
+      "tuple",
+      "set",
+      "str"
+    ],
+    "correct": 2,
+    "explanation": "A set stores distinct elements."
+  },
+  {
+    "id": "py-collections-2",
+    "topic": "py-collections",
+    "version": 1,
+    "difficulty": 2,
+    "question": "What does {'name': 'Ada'}.get('age', 0) return?",
+    "options": [
+      "None",
+      "0",
+      "'age'",
+      "A KeyError"
+    ],
+    "correct": 1,
+    "explanation": "dict.get returns the supplied default when the key is missing."
+  },
+  {
+    "id": "py-functions-1",
+    "topic": "py-functions",
+    "version": 1,
+    "difficulty": 1,
+    "question": "A Python function finishes without return. What value does its caller receive?",
+    "options": [
+      "False",
+      "0",
+      "None",
+      "An empty string"
+    ],
+    "correct": 2,
+    "explanation": "Functions without an explicit return value return None."
+  },
+  {
+    "id": "py-functions-2",
+    "topic": "py-functions",
+    "version": 1,
+    "difficulty": 2,
+    "question": "When is the default list in def f(items=[]): created?",
+    "options": [
+      "Each time f is called",
+      "When the function is defined",
+      "Only when append runs",
+      "When the program exits"
+    ],
+    "correct": 1,
+    "explanation": "Defaults are evaluated once at definition time, so a mutable default can be shared across calls."
+  },
+  {
+    "id": "sql-select-1",
+    "topic": "sql-select",
+    "version": 1,
+    "difficulty": 1,
+    "question": "Which condition selects rows with a missing email?",
+    "options": [
+      "email = NULL",
+      "email IS NULL",
+      "email == NULL",
+      "email = 'NULL'"
+    ],
+    "correct": 1,
+    "explanation": "SQL uses IS NULL to test for null values."
+  },
+  {
+    "id": "sql-select-2",
+    "topic": "sql-select",
+    "version": 1,
+    "difficulty": 1,
+    "question": "Which clause guarantees a result sorted by score from largest to smallest?",
+    "options": [
+      "GROUP BY score",
+      "WHERE score DESC",
+      "ORDER BY score DESC",
+      "SELECT DESC score"
+    ],
+    "correct": 2,
+    "explanation": "ORDER BY specifies result ordering; DESC requests descending order."
+  },
+  {
+    "id": "sql-joins-1",
+    "topic": "sql-joins",
+    "version": 1,
+    "difficulty": 1,
+    "question": "Which join retains all left-table rows even when the right table has no match?",
+    "options": [
+      "INNER JOIN",
+      "LEFT JOIN",
+      "CROSS JOIN",
+      "Only a self join"
+    ],
+    "correct": 1,
+    "explanation": "LEFT JOIN keeps unmatched left rows with nulls for right-side columns."
+  },
+  {
+    "id": "sql-joins-2",
+    "topic": "sql-joins",
+    "version": 1,
+    "difficulty": 2,
+    "question": "One customer matches three orders. How many rows does their INNER JOIN produce for that customer?",
+    "options": [
+      "1",
+      "2",
+      "3",
+      "0"
+    ],
+    "correct": 2,
+    "explanation": "Each matching customer-order pair produces a result row."
+  },
+  {
+    "id": "sql-group-1",
+    "topic": "sql-group",
+    "version": 1,
+    "difficulty": 1,
+    "question": "Which clause filters groups after aggregation?",
+    "options": [
+      "WHERE",
+      "HAVING",
+      "ORDER BY",
+      "LIMIT"
+    ],
+    "correct": 1,
+    "explanation": "HAVING filters grouped results; WHERE filters input rows."
+  },
+  {
+    "id": "sql-group-2",
+    "topic": "sql-group",
+    "version": 1,
+    "difficulty": 2,
+    "question": "A column has values 2, NULL, 5. What does COUNT(column) return?",
+    "options": [
+      "3",
+      "2",
+      "1",
+      "NULL"
+    ],
+    "correct": 1,
+    "explanation": "COUNT(column) counts only non-null values, so the result is 2."
+  },
+  {
+    "id": "js-values-3",
+    "topic": "js-values",
+    "version": 1,
+    "difficulty": 2,
+    "question": "What is Boolean(0) in JavaScript?",
+    "options": [
+      "true",
+      "false",
+      "undefined",
+      "An error"
+    ],
+    "correct": 1,
+    "explanation": "Zero converts to false in a Boolean context."
+  },
+  {
+    "id": "js-values-4",
+    "topic": "js-values",
+    "version": 1,
+    "difficulty": 2,
+    "question": "What is typeof null in JavaScript?",
+    "options": [
+      "null",
+      "undefined",
+      "object",
+      "boolean"
+    ],
+    "correct": 2,
+    "explanation": "typeof null returns object, a historical behavior of JavaScript."
+  },
+  {
+    "id": "js-functions-3",
+    "topic": "js-functions",
+    "version": 1,
+    "difficulty": 2,
+    "question": "What does (() => { const x = 3; return () => x + 1; })()() return?",
+    "options": [
+      "3",
+      "4",
+      "undefined",
+      "A ReferenceError"
+    ],
+    "correct": 1,
+    "explanation": "The returned closure retains access to x, so the second call returns 4."
+  },
+  {
+    "id": "js-functions-4",
+    "topic": "js-functions",
+    "version": 1,
+    "difficulty": 2,
+    "question": "After let n = 1; function f(n) { n = 9; } f(n); what is the outer n?",
+    "options": [
+      "1",
+      "9",
+      "undefined",
+      "null"
+    ],
+    "correct": 0,
+    "explanation": "Reassigning the local number parameter does not change the outer variable."
+  },
+  {
+    "id": "js-arrays-3",
+    "topic": "js-arrays",
+    "version": 1,
+    "difficulty": 2,
+    "question": "What is [1, 2, 3].reduce((sum, x) => sum + x, 0)?",
+    "options": [
+      "[1,2,3]",
+      "3",
+      "6",
+      "0"
+    ],
+    "correct": 2,
+    "explanation": "reduce accumulates 0 + 1 + 2 + 3."
+  },
+  {
+    "id": "js-arrays-4",
+    "topic": "js-arrays",
+    "version": 1,
+    "difficulty": 2,
+    "question": "After const a = [1,2]; const b = a.map(x => x + 1); what is a?",
+    "options": [
+      "[2,3]",
+      "[1,2]",
+      "[1,2,3]",
+      "undefined"
+    ],
+    "correct": 1,
+    "explanation": "This map callback only returns numbers, so the original array is unchanged."
+  },
+  {
+    "id": "js-async-3",
+    "topic": "js-async",
+    "version": 1,
+    "difficulty": 2,
+    "question": "Where can a rejected promise awaited inside a try block be handled?",
+    "options": [
+      "In the matching catch block",
+      "Only in a setTimeout",
+      "It can never be handled",
+      "In a CSS rule"
+    ],
+    "correct": 0,
+    "explanation": "Awaiting a rejected promise throws its rejection reason inside the async function."
+  },
+  {
+    "id": "js-async-4",
+    "topic": "js-async",
+    "version": 1,
+    "difficulty": 2,
+    "question": "What does Promise.all do if one input promise rejects?",
+    "options": [
+      "Always resolves with partial results",
+      "Rejects with a rejection reason",
+      "Cancels all underlying operations automatically",
+      "Waits forever"
+    ],
+    "correct": 1,
+    "explanation": "Promise.all rejects if an input rejects; it does not automatically cancel the underlying operations."
+  },
+  {
+    "id": "react-state-3",
+    "topic": "react-state",
+    "version": 1,
+    "difficulty": 2,
+    "question": "Why use setCount(previous => previous + 1)?",
+    "options": [
+      "It directly changes the DOM",
+      "It uses the pending state value",
+      "It prevents every future render",
+      "It changes props"
+    ],
+    "correct": 1,
+    "explanation": "An updater computes the next value from pending state, avoiding dependence on a stale render snapshot."
+  },
+  {
+    "id": "react-state-4",
+    "topic": "react-state",
+    "version": 1,
+    "difficulty": 2,
+    "question": "Which update changes an object state name without mutating the previous object?",
+    "options": [
+      "user.name = 'Ada'",
+      "setUser(previous => ({...previous, name: 'Ada'}))",
+      "delete user.name",
+      "setUser(user.name)"
+    ],
+    "correct": 1,
+    "explanation": "The spread creates a new object while retaining other fields."
+  },
+  {
+    "id": "py-values-3",
+    "topic": "py-values",
+    "version": 1,
+    "difficulty": 2,
+    "question": "What is -7 // 2 in Python?",
+    "options": [
+      "-3",
+      "-4",
+      "3",
+      "-3.5"
+    ],
+    "correct": 1,
+    "explanation": "Floor division rounds toward negative infinity, giving -4."
+  },
+  {
+    "id": "py-values-4",
+    "topic": "py-values",
+    "version": 1,
+    "difficulty": 2,
+    "question": "What is len('hello'[1:4]) in Python?",
+    "options": [
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    "correct": 1,
+    "explanation": "The slice contains indices 1, 2 and 3: ell."
+  },
+  {
+    "id": "py-collections-3",
+    "topic": "py-collections",
+    "version": 1,
+    "difficulty": 2,
+    "question": "After a = [1]; b = a; b.append(2), what is a?",
+    "options": [
+      "[1]",
+      "[2]",
+      "[1, 2]",
+      "None"
+    ],
+    "correct": 2,
+    "explanation": "Both names refer to the same mutable list."
+  },
+  {
+    "id": "py-collections-4",
+    "topic": "py-collections",
+    "version": 1,
+    "difficulty": 2,
+    "question": "Which expression safely copies a flat list a before appending to the copy?",
+    "options": [
+      "b = a",
+      "b = a.copy()",
+      "b = None",
+      "b = a.append(1)"
+    ],
+    "correct": 1,
+    "explanation": "list.copy returns a shallow copy; appending to that new list does not append to a."
+  },
+  {
+    "id": "py-functions-3",
+    "topic": "py-functions",
+    "version": 1,
+    "difficulty": 2,
+    "question": "What does def f(x): return x * 2 produce when called as f(4)?",
+    "options": [
+      "4",
+      "6",
+      "8",
+      "None"
+    ],
+    "correct": 2,
+    "explanation": "The return expression evaluates 4 * 2."
+  },
+  {
+    "id": "py-functions-4",
+    "topic": "py-functions",
+    "version": 1,
+    "difficulty": 2,
+    "question": "Which default-argument pattern creates a fresh list when the caller omits items?",
+    "options": [
+      "Use items=[] and append directly",
+      "Use items=None, then set items=[] when items is None",
+      "Use a global shared list",
+      "Use items=list without calling it"
+    ],
+    "correct": 1,
+    "explanation": "None as a sentinel lets each omitted argument create a new list inside the function."
+  },
+  {
+    "id": "sql-select-3",
+    "topic": "sql-select",
+    "version": 1,
+    "difficulty": 2,
+    "question": "Which predicate selects scores from 50 through 80, including both endpoints?",
+    "options": [
+      "score BETWEEN 50 AND 80",
+      "score > 50 AND score < 80",
+      "score = 50 AND score = 80",
+      "score IN (50,80)"
+    ],
+    "correct": 0,
+    "explanation": "BETWEEN includes both bounds; IN with two values selects only the endpoints."
+  },
+  {
+    "id": "sql-select-4",
+    "topic": "sql-select",
+    "version": 1,
+    "difficulty": 2,
+    "question": "Without ORDER BY, can a SQL query guarantee a particular row order?",
+    "options": [
+      "Yes, insertion order",
+      "Yes, primary key order",
+      "No",
+      "Yes, alphabetical order"
+    ],
+    "correct": 2,
+    "explanation": "A requested result order must be specified with ORDER BY."
+  },
+  {
+    "id": "sql-joins-3",
+    "topic": "sql-joins",
+    "version": 1,
+    "difficulty": 2,
+    "question": "A CROSS JOIN combines 2 left rows with 3 right rows. How many rows result?",
+    "options": [
+      "2",
+      "3",
+      "5",
+      "6"
+    ],
+    "correct": 3,
+    "explanation": "A cross join forms every pair: 2 times 3."
+  },
+  {
+    "id": "sql-joins-4",
+    "topic": "sql-joins",
+    "version": 1,
+    "difficulty": 2,
+    "question": "After a LEFT JOIN, what does WHERE right_table.id IS NULL commonly find when that id is non-null for matched rows?",
+    "options": [
+      "Unmatched left rows",
+      "All matched rows",
+      "Only right rows",
+      "The largest IDs"
+    ],
+    "correct": 0,
+    "explanation": "Unmatched rows have null right-side fields after the left join."
+  },
+  {
+    "id": "sql-group-3",
+    "topic": "sql-group",
+    "version": 1,
+    "difficulty": 2,
+    "question": "For values 2, 2, NULL, 5, what is COUNT(DISTINCT value)?",
+    "options": [
+      "4",
+      "3",
+      "2",
+      "1"
+    ],
+    "correct": 2,
+    "explanation": "DISTINCT removes duplicate non-null values, leaving 2 and 5."
+  },
+  {
+    "id": "sql-group-4",
+    "topic": "sql-group",
+    "version": 1,
+    "difficulty": 2,
+    "question": "For values 2, NULL, 4, what is AVG(value)?",
+    "options": [
+      "2",
+      "3",
+      "6",
+      "NULL"
+    ],
+    "correct": 1,
+    "explanation": "AVG ignores null inputs, so the mean is (2 + 4) / 2 = 3."
+  }
 ]

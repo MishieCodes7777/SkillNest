@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/AppLayout';
 import CommunityFeed from '../components/CommunityFeed';
 import FollowButton from '../components/FollowButton';
@@ -24,7 +24,7 @@ export default function PublicProfile() {
             .then(d => {
                 if (!d.success) { setNotFound(true); return; }
                 setUser(d.user);
-                if (d.user.role === 'mentor') {
+                if (d.user.role === 'mentor' || d.user.isMentor) {
                     fetch(`/api/mentor/profile/${userId}`).then(r => r.json())
                         .then(mp => { if (mp.success) setMentorProfile(mp.profile); })
                         .catch(() => { });
@@ -58,6 +58,7 @@ export default function PublicProfile() {
                         <button onClick={() => navigate(user.role === 'mentor' ? '/mentor/settings' : '/profile')} style={{ padding: '9px 18px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', cursor: 'pointer', fontSize: 13 }}>Edit Profile</button>
                     )}
                     {!isMe && <FollowButton userId={user.id} me={me} />}
+                    {(user.role === 'mentor' || user.isMentor) && <Link className="learn-primary" to={`/u/${user.id}/research`}>Research papers →</Link>}
                 </div>
 
                 {mentorProfile?.bio && (

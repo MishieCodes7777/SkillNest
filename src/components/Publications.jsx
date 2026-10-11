@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../utils/api';
 import '../styles/learning.css';
 export function PublicationCard({ work, children }) {
@@ -8,5 +9,5 @@ export default function Publications({ userId }) {
     const [works, setWorks] = useState([]);
     useEffect(() => { let alive = true; api(`/api/research/publications/${userId}`).then(d => { if (alive) setWorks(d.publications); }).catch(() => {}); return () => { alive = false; }; }, [userId]);
     if (!works.length) return null;
-    return <section style={{ maxWidth: 800, margin: '25px auto', padding: '0 30px' }}><h2>Research & publications</h2><p className="research-note">Imported records selected by this mentor. Publication ownership is self-declared; topic tags come from the source.</p><div className="research-list">{works.map(w => <PublicationCard work={w} key={w.id} />)}</div></section>;
+    return <section style={{ maxWidth: 800, margin: '25px auto', padding: '0 30px' }}><div className="learn-row"><h2>Research papers</h2><Link className="learn-primary" to={`/u/${userId}/research`}>Research papers · {works.length} →</Link></div><p className="research-note">Browse this mentor’s imported publications and read available full text. Publication ownership is self-declared.</p><div className="research-list">{works.slice(0, 3).map(w => <PublicationCard work={w} key={w.id} />)}</div></section>;
 }

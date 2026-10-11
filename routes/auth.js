@@ -297,14 +297,18 @@ router.get("/users/:id", verifyToken, async (req, res) => {
     const pool = require("../config/database");
     try {
         const result = await pool.query(
-            `SELECT u.id, u.name, u.username, u.role, u.created_at,
+            `SELECT u.id, u.name, u.username, u.role, u.roles, u.created_at,
                     COALESCE(NULLIF(mp.profile_photo, ''), u.avatar_url, '') AS avatar_url
              FROM users u LEFT JOIN mentor_profiles mp ON mp.user_id = u.id
              WHERE u.id = $1`,
             [req.params.id]
         );
         if (result.rows.length === 0) return res.status(404).json({ success: false, message: "User not found." });
-        res.json({ success: true, user: result.rows[0] });
+        const publicUser = result.rows[0];
+        let publicRoles = []; try { publicRoles = JSON.parse(publicUser.roles || '[]'); } catch {}
+        publicUser.isMentor = publicUser.role === 'mentor' || publicRoles.includes('mentor');
+        delete publicUser.roles;
+        res.json({ success: true, user: publicUser });
     } catch (err) {
         console.error("Get user error:", err);
         res.status(500).json({ success: false, message: "Could not load user." });

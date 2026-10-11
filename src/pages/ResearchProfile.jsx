@@ -7,10 +7,7 @@ import { getCurrentUser } from '../utils/auth';
 import { api } from '../utils/api';
 import '../styles/learning.css';
 
-const exampleWorks = [
-    { external_id: 'example-1', title: 'Attention Is All You Need', year: 2017, authors: 'Ashish Vaswani and colleagues', source: 'Example publication', url: 'https://arxiv.org/abs/1706.03762', full_text_url: 'https://arxiv.org/pdf/1706.03762', topics: ['Natural language processing', 'Transformers'] },
-    { external_id: 'example-2', title: 'Deep Residual Learning for Image Recognition', year: 2015, authors: 'Kaiming He and colleagues', source: 'Example publication', url: 'https://arxiv.org/abs/1512.03385', full_text_url: 'https://arxiv.org/pdf/1512.03385', topics: ['Computer vision', 'Deep learning'] },
-];
+import exampleWorks from '../../data/researchExamples.json';
 export default function ResearchProfile({ preview = false }) {
     const [url, setUrl] = useState('');
     const [works, setWorks] = useState(preview ? exampleWorks : []);
@@ -38,6 +35,7 @@ export default function ResearchProfile({ preview = false }) {
     }
     const Layout = preview ? PreviewLayout : MentorLayout;
     return <Layout><main className="learn-page" style={!preview ? { paddingTop: 25 } : {}}><div className="learn-heading"><div><div className="learn-eyebrow"><span className="learn-dot" /> KNOWLEDGE WORTH SHARING</div><h1>Your work.<br /><span>All in one place.</span></h1><p>Bring your publications into your mentor profile and help curious learners discover your research.</p></div><div className="learn-orbit" aria-hidden="true"><div className="learn-orbit-core">⌘</div><span className="orbit-label one">Research</span><span className="orbit-label two">Connect</span><span className="orbit-label three">Share</span></div></div>
+        <p style={{ marginBottom: 22 }}><Link className="learn-secondary" to={preview ? '/preview/research/papers' : `/u/${user?.id}/research`}>View Research papers as a visitor →</Link></p>
         <section className="learn-card"><div className="learn-row"><div><h2>Paste your link. Import your research.</h2><p className="learn-muted">SkillNest fetches every available page of public publications and saves the records to your mentor profile automatically.</p></div><span className="learn-pill">Mentor-only importing</span></div>
         {preview ? <div className="research-form"><input className="learn-input" aria-label="Example profile URL" placeholder="https://orcid.org/0000-0000-0000-0000" disabled /><Link className="learn-primary" to="/mentor/research">Open Mentor Portal →</Link></div> : <form className="research-form" onSubmit={importWorks}><input className="learn-input" type="url" aria-label="Research profile URL" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://orcid.org/your-researcher-id" required maxLength={300} /><button className="learn-primary" disabled={busy}>{busy ? 'Importing publications…' : 'Import all publications →'}</button></form>}
         <div className="learn-inline-tags" aria-label="Research sources">{sources.map(source => <span key={source.name}>{source.name} · {source.enabled ? 'Connected' : 'Awaiting connection'}</span>)}</div>

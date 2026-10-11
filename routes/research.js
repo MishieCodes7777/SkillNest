@@ -4,9 +4,37 @@ const pool = require('../config/database');
 const { verifyToken } = require('../middleware/auth');
 const { importProfile, sourceStatus } = require('../services/research');
 const { rateLimit } = require('express-rate-limit');
+const { arxivPdf, readPdf } = require('../services/researchReader');
+const examples = require('../data/researchExamples.json');
+const { matchResearch } = require('../services/researchMatching');
 const activeImports = new Set();
 const wrap = fn => async (req, res, next) => { try { await fn(req, res); } catch (e) { next(e); } };
-router.get('/sources', (req, res) => res.json({ success: true, sources: sourceStatus(), version: 'automatic-import-2' }));
+router.get('/sources', (req, res) => res.json({ success: true, sources: sourceStatus(), version: 'research-matching-4' }));
+router.get('/matches', wrap(async (req, res) => {
+    const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    if (query.length < 2 || query.length > 200) return res.status(400).json({ success: false, message: 'Describe your research interest in 2–200 characters.' });
+    let papers, corpusLimited = false;
+    if (req.query.preview === 'true') papers = examples.map((w, i) => ({ ...w, user_id: `example-${i + 1}`, mentor_name: i === 0 ? 'Example language research collection' : 'Example vision research collection' }));
+    else {
+        papers = (await pool.query(`SELECT p.*,u.name AS mentor_name,u.role,u.roles FROM research_publications p JOIN users u ON u.id=p.user_id ORDER BY p.created_at DESC,p.id DESC LIMIT 5001`)).rows;
+        corpusLimited = papers.length > 5000;
+        papers = papers.slice(0, 5000);
+        papers = papers.filter(p => { let roles = []; try { roles = JSON.parse(p.roles || '[]'); } catch {} return p.role === 'mentor' || roles.includes('mentor'); });
+    }
+    res.json({ success: true, query, preview: req.query.preview === 'true', corpusLimited, ...matchResearch(query, papers) });
+}));
+const withReader = w => ({ ...w, reader_url: arxivPdf(w.full_text_url) ? `/api/research/papers/${w.id}/file` : null });
+router.get('/examples', (req, res) => res.json({ success: true, publications: examples.map(withReader) }));
+router.get('/papers/:id/file', rateLimit({ windowMs: 60 * 1000, limit: 20 }), wrap(async (req, res) => {
+    let work = examples.find(w => w.id === req.params.id);
+    if (!work && /^\d+$/.test(req.params.id)) work = (await pool.query('SELECT full_text_url FROM research_publications WHERE id=$1', [req.params.id])).rows[0];
+    if (!work) return res.status(404).type('text').send('Paper not found.');
+    try {
+        const pdf = await readPdf(work.full_text_url);
+        res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="research-paper.pdf"', 'Cache-Control': 'private, max-age=300' });
+        res.send(pdf);
+    } catch (e) { res.status(422).type('text').send(e.message); }
+}));
 async function saveWorks(userId, works) {
     const client = await pool.connect();
     try {
@@ -20,7 +48,9 @@ async function saveWorks(userId, works) {
 router.get('/publications/:userId', wrap(async (req, res) => {
     if (!/^\d+$/.test(req.params.userId)) return res.status(400).json({ success: false, message: 'Invalid profile.' });
     const result = await pool.query('SELECT * FROM research_publications WHERE user_id=$1 ORDER BY year DESC NULLS LAST, title', [req.params.userId]);
-    res.json({ success: true, publications: result.rows });
+    const author = (await pool.query('SELECT id,name FROM users WHERE id=$1', [req.params.userId])).rows[0];
+    if (!author) return res.status(404).json({ success: false, message: 'Profile not found.' });
+    res.json({ success: true, author, publications: result.rows.map(withReader) });
 }));
 router.use(verifyToken);
 router.use(async (req, res, next) => {

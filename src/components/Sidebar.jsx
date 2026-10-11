@@ -7,6 +7,7 @@ const navItems = [
     { path: '/', icon: 'home', label: 'Home' },
     { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
     { path: '/learning', icon: 'insights', label: 'Learning Studio' },
+    { path: '/research-match', icon: 'science', label: 'Research Matches' },
     { path: '/sessions', icon: 'videocam', label: 'Sessions' },
     { path: '/messages', icon: 'chat', label: 'Messages' },
     { path: '/community', icon: 'groups', label: 'Community' },

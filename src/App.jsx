@@ -25,6 +25,8 @@ const BecomeMentor = lazy(() => import('./pages/BecomeMentor'));
 const AdminMentorApplications = lazy(() => import('./pages/AdminMentorApplications'));
 const LearningHub = lazy(() => import('./pages/LearningHub'));
 const ResearchProfile = lazy(() => import('./pages/ResearchProfile'));
+const ResearchPapers = lazy(() => import('./pages/ResearchPapers'));
+const ResearchMatches = lazy(() => import('./pages/ResearchMatches'));
 
 // Mentor pages
 const MentorDashboard = lazy(() => import('./pages/mentor/MentorDashboard'));
@@ -58,6 +60,9 @@ function App() {
                     <Route path="/learning" element={<LearningHub />} />
                     <Route path="/preview" element={<LearningHub preview />} />
                     <Route path="/preview/research" element={<ResearchProfile preview />} />
+                    <Route path="/preview/research/papers" element={<ResearchPapers preview />} />
+                    <Route path="/preview/research-match" element={<ResearchMatches preview />} />
+                    <Route path="/research-match" element={<ResearchMatches />} />
                     <Route path="/mentor/research" element={<ResearchProfile />} />
                     <Route path="/sessions" element={<Sessions />} />
                     <Route path="/messages" element={<Messages />} />
@@ -72,6 +77,7 @@ function App() {
                     <Route path="/courses" element={<Courses />} />
                     <Route path="/community" element={<Community />} />
                     <Route path="/u/:userId" element={<PublicProfile />} />
+                    <Route path="/u/:userId/research" element={<ResearchPapers />} />
                     <Route path="/become-mentor" element={<BecomeMentor />} />
                     <Route path="/admin/mentor-applications" element={<AdminMentorApplications />} />
 

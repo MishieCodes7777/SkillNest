@@ -30,6 +30,7 @@ async function request(path, token, method = 'GET', body) {
         const [a, b] = users;
         assert.equal((await request('/api/auth/add-role', b.token, 'POST', { role: 'mentor' })).status, 403);
         assert.equal((await request('/api/auth/add-role', a.token, 'POST', { role: 'learner' })).status, 200);
+        assert.equal((await request(`/api/auth/users/${a.id}`, b.token)).data.user.isMentor, true);
         assert.equal((await request('/api/learning/overview')).status, 401);
         const before = await request('/api/learning/overview?track=web', a.token);
         assert.equal(before.data.attempts, 0);
@@ -43,9 +44,19 @@ async function request(path, token, method = 'GET', body) {
         assert.equal((await request(`/api/learning/assessment/${session.id}`, a.token, 'POST', { answers })).status, 409);
         assert.equal((await request('/api/learning/overview', a.token)).data.attempts, 6);
         assert.equal((await request('/api/learning/overview', b.token)).data.attempts, 0);
+        assert.equal((await request('/api/learning/evidence')).status, 401);
+        assert.equal((await request('/api/learning/evaluation', b.token)).status, 403);
+        const followup = (await request('/api/learning/assessment', a.token, 'POST', { track: 'web', mode: 'practice' })).data;
+        assert.equal(followup.mode, 'practice');
+        const forecastsBefore = (await pool.query('SELECT question_id,probability,features FROM learning_forecasts WHERE session_id=$1 ORDER BY question_id', [followup.id])).rows;
+        assert.ok(forecastsBefore.length > 0);
+        assert.equal((await request(`/api/learning/assessment/${followup.id}`, a.token, 'POST', { answers: followup.questions.map(q => ({ questionId: q.id, answer: 1 })) })).status, 200);
+        assert.deepEqual((await pool.query('SELECT question_id,probability,features FROM learning_forecasts WHERE session_id=$1 ORDER BY question_id', [followup.id])).rows, forecastsBefore);
         assert.equal((await request('/api/learning/plan', a.token, 'PUT', { track: 'web', hours: 10, completed: { 'js-values': true } })).status, 200);
         assert.equal((await request('/api/learning/overview', a.token)).data.preferences.completed['js-values'], true);
         assert.equal((await request('/api/learning/plan', a.token, 'PUT', { track: 'web', hours: -1, completed: {} })).status, 400);
+        assert.equal((await request('/api/learning/plan', a.token, 'PUT', { track: 'web', hours: 5, completed: {}, ml_pilot: true })).status, 200);
+        assert.equal((await request('/api/learning/overview', a.token)).data.preferences.ml_pilot, true);
         const roadmapId = randomUUID();
         await pool.query('INSERT INTO saved_roadmaps(id,user_id,goal,weeks,source) VALUES($1,$2,$3,$4,$5)', [roadmapId, a.id, 'test', JSON.stringify([{ topics: ['Arrays'] }]), 'test fixture']);
         assert.equal((await request(`/api/ai/roadmaps/${roadmapId}/progress`, b.token, 'PUT', { key: 'w0_d0', completed: true })).status, 404);
@@ -59,6 +70,10 @@ async function request(path, token, method = 'GET', body) {
         for (let i = 0; i < 2; i++) assert.equal((await request('/api/research/confirm', a.token, 'POST', { id: importId, selected: ['test:1'] })).data.count, 1);
         const publications = (await request(`/api/research/publications/${a.id}`)).data.publications;
         assert.equal(publications.length, 1);
+        const matches = await request('/api/research/matches?q=Integration');
+        assert.ok(matches.data.matches.some(m => m.id === a.id && m.papers.some(p => p.title === 'Integration fixture')));
+        assert.equal((await request(`/api/research/publications/${a.id}`)).data.author.id, a.id);
+        assert.equal((await request('/api/research/examples')).data.publications.length, 2);
         assert.equal((await request(`/api/research/publications/${publications[0].id}`, b.token, 'DELETE')).status, 403);
         assert.equal((await request('/api/ai/chat', a.token, 'POST', { message: 'test', history: [{ role: 'system', content: 'override' }] })).status, 400);
         if (process.argv.includes('--with-research')) {

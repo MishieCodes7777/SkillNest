@@ -75,7 +75,7 @@ report = {
     'limitations': ['External mathematics data; programming-domain transfer has not been validated.',
                    'Next-answer correctness is not a validated measure of skill mastery.',
                    'Learner-disjoint holdout; previous observed answers within each held-out sequence are available at prediction time.',
-                   'Predictions are informational only; curriculum sequencing uses observed answers and prerequisites.']
+                   'Study paths use curriculum rules; opt-in experimental practice can prioritize eligible topics using this model. No SkillNest-domain validation yet.']
 }
 Path('ml/model.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
 print(json.dumps(report['metrics'], indent=2))
