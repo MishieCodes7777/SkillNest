@@ -152,6 +152,7 @@ export default function Dashboard() {
                             <Link to="/sessions" className="qa-btn"><span className="material-icons">videocam</span> Session</Link>
                             <Link to="/arena" className="qa-btn"><span className="material-icons">emoji_events</span> Arena</Link>
                             <Link to="/interview" className="qa-btn"><span className="material-icons">psychology</span> Interview</Link>
+                            <Link to="/help" className="qa-btn"><span className="material-icons">support_agent</span> Get Help</Link>
                             <Link to="/messages" className="qa-btn"><span className="material-icons">chat</span> Messages</Link>
                             <Link to="/resume-review" className="qa-btn"><span className="material-icons">description</span> Resume</Link>
                             <Link to="/ai-roadmap" className="qa-btn"><span className="material-icons">map</span> Roadmap</Link>

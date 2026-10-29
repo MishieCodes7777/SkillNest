@@ -5,6 +5,7 @@ import InvitePanel from '../components/InvitePanel';
 import FollowButton from '../components/FollowButton';
 import { getCurrentUser, getUserData, saveUserData } from '../utils/auth';
 import '../styles/sessions.css';
+import { api } from '../utils/api';
 
 export default function Sessions() {
     const navigate = useNavigate();
@@ -19,12 +20,6 @@ export default function Sessions() {
         fetch('/api/auth/mentors').then(r => r.json()).then(d => { if (d.success) setMentors(d.mentors || []); }).catch(() => { });
     }, []);
 
-    function generateCode() {
-        const c = 'abcdefghijklmnopqrstuvwxyz';
-        const p = () => Array.from({ length: 3 }, () => c[Math.floor(Math.random() * c.length)]).join('');
-        return `${p()}-${p()}-${p()}`;
-    }
-
     function joinSession() {
         const normalized = code.trim().toLowerCase();
         if (!normalized) { alert('Enter a session code'); return; }
@@ -32,10 +27,9 @@ export default function Sessions() {
         navigate(`/meeting?meet=${normalized}`);
     }
 
-    function createSession() {
-        const c = generateCode();
-        const d = getUserData(); d.sessions++; d.activity.unshift({ text: 'Created session: ' + c, time: 'Just now' }); saveUserData(d);
-        setCreatedCode(c);
+    async function createSession() {
+        try { const {room}=await api('/api/meetings',{method:'POST',body:'{}'});setCreatedCode(room.id); }
+        catch(e){alert(e.message);}
     }
 
     return (
@@ -82,7 +76,7 @@ export default function Sessions() {
                                 <button onClick={() => setCreatedCode(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><span className="material-icons" style={{ color: '#888', fontSize: 22 }}>close</span></button>
                             </div>
                             <div style={{ padding: 22 }}>
-                                <p style={{ color: '#8892b0', fontSize: 13, marginBottom: 16 }}>Share the link below or invite people directly. You can also just enter now and invite people once you're in.</p>
+                                <p style={{ color: '#8892b0', fontSize: 13, marginBottom: 16 }}>Invite an accepted connection below. A link alone does not grant room access. Rooms support two participants and expire after four hours.</p>
                                 <InvitePanel meetCode={createdCode} />
                                 <button onClick={() => navigate(`/meeting?meet=${createdCode}`)} style={{ width: '100%', marginTop: 18, padding: 13, background: 'linear-gradient(45deg,#FF4FA3,#A855F7)', border: 'none', borderRadius: 10, color: 'white', fontWeight: 600, cursor: 'pointer' }}>Enter Meeting Room</button>
                             </div>

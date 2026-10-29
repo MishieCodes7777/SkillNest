@@ -21,7 +21,7 @@
 }
 
 .home-nav .logo {
-    color: #ff4fa3;
+    color: var(--sn-accent);
     font-size: 24px;
     font-weight: bold;
 }
@@ -40,14 +40,14 @@
 }
 
 .hero h1 span {
-    background: linear-gradient(45deg, #ff4fa3, #6c63ff);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .hero p {
     font-size: 18px;
-    color: #999;
+    color: var(--sn-muted);
     line-height: 1.6;
     margin-bottom: 35px;
     max-width: 550px;
@@ -72,8 +72,8 @@
 }
 
 .btn-primary {
-    background: linear-gradient(45deg, #ec4899, #8b5cf6);
-    color: white;
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
+    color:var(--sn-text);
     border: none;
 }
 
@@ -85,11 +85,11 @@
 .btn-secondary {
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
+    color:var(--sn-text);
 }
 
 .btn-secondary:hover {
-    border-color: #8b5cf6;
+    border-color: var(--sn-accent);
 }
 
 .btn-lg {
@@ -124,7 +124,7 @@
 }
 
 .feature-card:hover {
-    border-color: rgba(168, 85, 247, 0.3);
+    border-color: rgba(70,140,110, 0.3);
     transform: translateY(-4px);
 }
 
@@ -140,7 +140,7 @@
 
 .feature-card p {
     font-size: 14px;
-    color: #888;
+    color: var(--sn-muted);
     line-height: 1.5;
 }
 
@@ -169,13 +169,13 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 20px;
     font-size: 14px;
-    color: #ccc;
+    color: var(--sn-muted);
     transition: 0.3s;
 }
 
 .skill-tag:hover {
-    border-color: #ff4fa3;
-    color: white;
+    border-color: var(--sn-accent);
+    color:var(--sn-text);
 }
 
 .cta-section {
@@ -191,7 +191,7 @@
 }
 
 .cta-section p {
-    color: #888;
+    color: var(--sn-muted);
     margin-bottom: 30px;
     font-size: 16px;
 }
@@ -205,7 +205,7 @@
 }
 
 .footer-brand {
-    color: #ff4fa3;
+    color: var(--sn-accent);
     font-weight: bold;
     font-size: 18px;
 }
@@ -216,13 +216,13 @@
 }
 
 .footer-links a {
-    color: #888;
+    color: var(--sn-muted);
     font-size: 14px;
     transition: 0.2s;
 }
 
 .footer-links a:hover {
-    color: white;
+    color:var(--sn-text);
 }
 
 @media (max-width:768px) {
@@ -234,4 +234,12 @@
         flex-direction: column;
         align-items: center;
     }
-}
+}/* Keep animated headings readable even while GSAP writes inline character colours. */
+.home-page :is(h1,h2),.home-page :is(h1,h2) *{color:var(--sn-text)!important;-webkit-text-fill-color:var(--sn-text)!important;background:none!important}
+.home-page{background:radial-gradient(ellipse at 15% 20%,var(--sn-soft),transparent 65%)}
+[data-theme=light] .home-page{background:radial-gradient(ellipse at 15% 20%,#e5dcf3,transparent 65%),linear-gradient(135deg,#f5f3ec,#e9f1e9)}
+[data-theme=light] .home-page canvas{filter:brightness(.5);opacity:.8}
+.home-page :is(.home-nav,.feature-card,.skill-tag){background:var(--sn-surface);border-color:var(--sn-border)}
+.home-page .btn-secondary{border-color:var(--sn-border)}
+.home-page .hero h1{font-size:clamp(32px,5vw,48px)!important;white-space:normal!important}
+@media(max-width:480px){.home-page .features{padding:45px 18px}.home-page .features-grid{grid-template-columns:1fr}.home-page .hero{padding-top:65px}}

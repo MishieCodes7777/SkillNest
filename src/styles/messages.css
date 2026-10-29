@@ -38,12 +38,12 @@
     font-size: 12px;
     cursor: pointer;
     background: rgba(255, 255, 255, 0.03);
-    color: #8892b0;
+    color: var(--sn-muted);
 }
 
 .msg-tabs button.active {
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
-    color: white;
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
+    color:var(--sn-text);
 }
 
 .msg-search {
@@ -52,12 +52,12 @@
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
-    color: white;
+    color:var(--sn-text);
     font-size: 13px;
 }
 
 .msg-search:focus {
-    border-color: #A855F7;
+    border-color: var(--sn-accent);
 }
 
 .msg-list {
@@ -68,7 +68,7 @@
 .msg-empty {
     padding: 30px;
     text-align: center;
-    color: #555;
+    color: var(--sn-muted);
     font-size: 13px;
 }
 
@@ -87,15 +87,15 @@
 }
 
 .contact-item.active {
-    background: rgba(255, 79, 163, 0.05);
-    border-left-color: #FF4FA3;
+    background: rgba(70,140,110, 0.05);
+    border-left-color: var(--sn-accent);
 }
 
 .c-av {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -119,7 +119,7 @@
 
 .c-info p {
     font-size: 12px;
-    color: #8892b0;
+    color: var(--sn-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -135,17 +135,17 @@
 
 .conn-btn {
     padding: 6px 12px;
-    border: 1px solid #A855F7;
+    border: 1px solid var(--sn-accent);
     background: transparent;
-    color: #A855F7;
+    color: var(--sn-accent);
     border-radius: 6px;
     font-size: 11px;
     cursor: pointer;
 }
 
 .conn-btn:hover {
-    background: #A855F7;
-    color: white;
+    background: var(--sn-accent);
+    color:var(--sn-text);
 }
 
 .conn-btn.connected {
@@ -156,8 +156,8 @@
 }
 
 .conn-btn.pending {
-    border-color: #666;
-    color: #888;
+    border-color: var(--sn-muted);
+    color: var(--sn-muted);
     cursor: default;
 }
 
@@ -171,8 +171,8 @@
     height: 18px;
     padding: 0 5px;
     border-radius: 9px;
-    background: #FF4FA3;
-    color: white;
+    background: var(--sn-accent);
+    color:var(--sn-text);
     font-size: 10.5px;
     font-weight: 700;
     display: flex;
@@ -231,7 +231,7 @@
 
 .invite-panel p {
     font-size: 13px;
-    color: #8892b0;
+    color: var(--sn-muted);
     margin-bottom: 14px;
 }
 
@@ -241,7 +241,7 @@
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 6px;
-    color: white;
+    color:var(--sn-text);
     font-size: 13px;
     margin-bottom: 10px;
 }
@@ -249,10 +249,10 @@
 .invite-btn {
     width: 100%;
     padding: 10px;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     border: none;
     border-radius: 8px;
-    color: white;
+    color:var(--sn-text);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -276,12 +276,12 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: #555;
+    color: var(--sn-muted);
 }
 
 .msg-empty-chat .material-icons {
     font-size: 48px;
-    color: #A855F7;
+    color: var(--sn-accent);
     opacity: 0.4;
     margin-bottom: 10px;
 }
@@ -318,8 +318,8 @@
 
 .bubble.sent {
     align-self: flex-end;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
-    color: white;
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
+    color:var(--sn-text);
     border-bottom-right-radius: 4px;
 }
 
@@ -327,7 +327,7 @@
     align-self: flex-start;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    color: #e0e0e0;
+    color: var(--sn-text);
     border-bottom-left-radius: 4px;
 }
 
@@ -351,19 +351,19 @@
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
-    color: white;
+    color:var(--sn-text);
     font-size: 14px;
 }
 
 .msg-input-area input:focus {
-    border-color: #A855F7;
+    border-color: var(--sn-accent);
 }
 
 .msg-input-area button {
     width: 42px;
     height: 42px;
     border-radius: 50%;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     border: none;
     display: flex;
     align-items: center;
@@ -373,5 +373,8 @@
 
 .msg-input-area button .material-icons {
     font-size: 20px;
-    color: white;
-}
+    color:var(--sn-text);
+}.msg-list button.contact-item{width:100%;text-align:left;border:0;background:transparent;color:var(--sn-text);font:inherit;cursor:pointer}.msg-list button.contact-item.active{background:var(--sn-soft)}
+.msg-attachment img,.msg-attachment video{max-width:100%;max-height:300px;border-radius:10px}.msg-attachment audio{max-width:100%;width:260px}.msg-attachment button,.bubble details button{padding:5px 8px;margin:5px;border-radius:6px;border:1px solid var(--sn-border);background:var(--sn-surface);color:var(--sn-text);cursor:pointer}.bubble details{font-size:11px;clear:both}.bubble summary{cursor:pointer}.msg-compose{background:var(--sn-surface);border-top:1px solid var(--sn-border)}.msg-compose>p{padding:8px 16px;font-size:12px}.msg-tools{display:flex;flex-wrap:wrap;gap:10px;padding:8px 16px 16px;align-items:center}.msg-tools label,.msg-tools button{font-size:12px}.msg-tools input[type=file]{max-width:220px}.msg-tools small{width:100%;color:var(--sn-muted);font-size:11px}.msg-chat-header button{background:var(--sn-raised);color:var(--sn-text);border:1px solid var(--sn-border);border-radius:8px;padding:7px;cursor:pointer}.msg-chat-header a{margin-right:auto;color:var(--sn-text)}.req-item button{padding:7px;border:1px solid var(--sn-border);border-radius:7px;background:var(--sn-surface);color:var(--sn-text);cursor:pointer}.msg-empty-chat p{max-width:360px;line-height:1.7}.bubble{overflow-wrap:anywhere;max-width:80%}.msg-chat-area{min-height:0}.msg-right{min-width:0}.msg-tools button{padding:7px;background:var(--sn-raised);color:var(--sn-text);border:1px solid var(--sn-border);border-radius:7px}
+@media(max-width:650px){.msg-app:not(.has-chat) .msg-left{width:100%!important}.msg-app:not(.has-chat) .msg-right{display:none}.msg-app.has-chat .msg-left{display:none}.msg-app.has-chat .msg-right{width:100%}.msg-chat-header{padding-top:56px}.msg-compose{padding-bottom:45px}.bubble{max-width:92%}}
+[data-theme] .msg-tabs button.active{background:var(--sn-accent-strong);color:#fff}.bubble.received .bubble-time{color:var(--sn-muted)}.bubble.sent .bubble-time{color:#e4f2e9}.msg-input-area input{min-width:0}.msg-input-area button{width:auto;min-width:64px;border-radius:10px;color:white;background:var(--sn-accent-strong);padding:0 12px}.msg-left{flex-shrink:0}.msg-chat-header{flex-wrap:wrap}.msg-app{width:100%;max-width:100%;overflow:hidden}

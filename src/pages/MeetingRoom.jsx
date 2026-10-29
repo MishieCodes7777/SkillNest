@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getUserData, saveUserData, getCurrentUser, isLoggedIn } from '../utils/auth';
 import { io } from 'socket.io-client';
 import SimplePeer from 'simple-peer';
+import { api } from '../utils/api';
 import InvitePanel from '../components/InvitePanel';
 
 export default function MeetingRoom() {
@@ -17,6 +18,9 @@ export default function MeetingRoom() {
     // name in someone else's room (and vice versa).
     const userName = getCurrentUser()?.name || 'User';
     const [authError, setAuthError] = useState('');
+    const [mediaNotice,setMediaNotice]=useState('');
+    const [callStatus,setCallStatus]=useState('Joining room');
+    const [voiceOnly,setVoiceOnly]=useState(false);
 
     const [micOn, setMicOn] = useState(true);
     const [camOn, setCamOn] = useState(true);
@@ -35,6 +39,7 @@ export default function MeetingRoom() {
     // no other reliable way to tell "silent" apart from "actually muted").
     const [remotePeers, setRemotePeers] = useState({});
 
+    const generation=useRef(0);
     const localVideoRef = useRef(null);
     const localStreamRef = useRef(null);
     const socketRef = useRef(null);
@@ -54,7 +59,7 @@ export default function MeetingRoom() {
         // on their dashboard with no way back to the meeting except re-sharing.
         if (!isLoggedIn()) { navigate('/login?redirect=' + encodeURIComponent(`/meeting?meet=${meetId}`)); return; }
         if (!meetId) { navigate('/sessions'); return; }
-        init();
+        init(++generation.current);
         fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } })
             .then(r => r.json()).then(d => { if (d.success) setMyAvatar(d.user.avatar_url || ''); }).catch(() => { });
         const interval = setInterval(updateTimer, 1000);
@@ -72,13 +77,25 @@ export default function MeetingRoom() {
         setTimer(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
     }
 
-    async function init() {
+    async function init(run) {
+        let room;
+        try {room=(await api(`/api/meetings/${meetId}`)).room;}catch(e){setAuthError(e.message);setConnecting(false);return;}
+        if(run!==generation.current)return;
+        setCamOn(room.mode !== 'voice');
+        setVoiceOnly(room.mode==='voice');
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: room.mode !== 'voice', audio: true });
+            if(run!==generation.current){stream.getTracks().forEach(t=>t.stop());return;}
             localStreamRef.current = stream;
             activeVideoTrackRef.current = stream.getVideoTracks()[0] || null;
             if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-        } catch (e) { console.warn('Camera error', e); }
+        } catch (e) {
+            if(run!==generation.current)return;
+            setMediaNotice('Camera unavailable. Trying an audio-only connection.');
+            setCamOn(false);
+            try {const stream=await navigator.mediaDevices.getUserMedia({video:false,audio:true});if(run!==generation.current){stream.getTracks().forEach(t=>t.stop());return;}localStreamRef.current=stream;if(localVideoRef.current)localVideoRef.current.srcObject=stream;}
+            catch {setMicOn(false);setMediaNotice('Microphone permission is unavailable. You can use meeting chat; allow device permissions and rejoin to speak.');}
+        }
 
         // Fresh TURN credentials for this call — falls back to the default STUN-only
         // list (already set in iceServersRef) if this fails or isn't configured.
@@ -88,10 +105,14 @@ export default function MeetingRoom() {
             if (data.success && Array.isArray(data.iceServers) && data.iceServers.length > 0) iceServersRef.current = data.iceServers;
         } catch (e) { console.warn('Could not fetch TURN credentials, falling back to STUN-only', e); }
 
+        if(run!==generation.current)return;
         const socket = io({ auth: { token: localStorage.getItem('token') } });
         socketRef.current = socket;
         socket.on('connect', () => {
+            Object.values(peersRef.current).forEach(p=>p.destroy());peersRef.current={};setRemoteStreams({});setRemotePeers({});
+            setCallStatus('Waiting for the other participant');
             setConnecting(false);
+            for(const name of ['all-users','user-joined','signal','user-left','chat-message','mic-toggle','cam-toggle','screen-share-toggle'])socket.removeAllListeners(name);
             socket.emit('userconnect', { meetingid: meetId });
             socket.on('all-users', users => users.forEach(u => { createPeer(u.connectionId, true); trackPeer(u.connectionId, u.user_id); }));
             socket.on('user-joined', data => { createPeer(data.connId, false); trackPeer(data.connId, data.user_id); });
@@ -106,7 +127,9 @@ export default function MeetingRoom() {
             socket.on('cam-toggle', data => setRemotePeers(prev => ({ ...prev, [data.from]: { ...prev[data.from], camOff: !data.camOn } })));
             socket.on('screen-share-toggle', data => setRemotePeers(prev => ({ ...prev, [data.from]: { ...prev[data.from], sharing: data.sharing } })));
         });
+        socket.on('meeting-error', data => {setConnecting(false);setAuthError(data.message);cleanup();});
         socket.on('connect_error', (err) => { setConnecting(false); setAuthError(err.message || 'Could not join the meeting.'); });
+        socket.on('disconnect',()=>setCallStatus('Connection interrupted — reconnecting'));
     }
 
     function trackPeer(connId, userId) {
@@ -130,8 +153,9 @@ export default function MeetingRoom() {
         });
         peersRef.current[connId] = peer;
         peer.on('signal', signal => socketRef.current.emit('signal', { to: connId, signal }));
-        peer.on('stream', stream => setRemoteStreams(prev => ({ ...prev, [connId]: stream })));
-        peer.on('error', err => console.warn('Peer connection error', connId, err.message));
+        peer.on('connect',()=>setCallStatus('Connected'));
+        peer.on('stream', stream => {setCallStatus('Connected');setRemoteStreams(prev => ({ ...prev, [connId]: stream }));});
+        peer.on('error', err => {setCallStatus('Media connection failed');setMediaNotice('Could not establish media. Rejoin the call; restrictive networks may require a working TURN relay.');console.warn('Peer connection error', connId, err.message);});
         // If someone joins mid-screen-share, their very first offer/answer already
         // carries the camera track (from `stream` above) — swap it for the screen
         // track right away so they see the share instead of a frozen camera frame.
@@ -197,6 +221,7 @@ export default function MeetingRoom() {
     }
 
     function cleanup() {
+        generation.current++;
         if (socketRef.current) socketRef.current.disconnect();
         Object.values(peersRef.current).forEach(p => p.destroy());
         if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
@@ -204,14 +229,14 @@ export default function MeetingRoom() {
     }
 
     function toggleMic() {
-        if (!localStreamRef.current) return;
+        if (!localStreamRef.current?.getAudioTracks().some(t=>t.readyState==='live')){setMediaNotice('No microphone is available. Allow microphone access and rejoin.');return;}
         const next = !micOn;
         localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = next; });
         setMicOn(next);
         socketRef.current?.emit('mic-toggle', { meetingid: meetId, muted: !next });
     }
     function toggleCam() {
-        if (!localStreamRef.current) return;
+        if (!localStreamRef.current?.getVideoTracks().some(t=>t.readyState==='live')){setMediaNotice(voiceOnly?'This is an audio call. Start a video call to use your camera.':'No camera is available. Allow camera access and rejoin.');return;}
         const next = !camOn;
         localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = next; });
         setCamOn(next);
@@ -236,31 +261,32 @@ export default function MeetingRoom() {
 
     if (authError) {
         return (
-            <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, background: '#0A0A0A', color: 'white' }}>
+            <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, background: 'var(--sn-bg)', color: 'white' }}>
                 <p style={{ color: '#ff8080', fontSize: 15 }}>{authError}</p>
-                <button onClick={() => navigate('/login')} style={{ padding: '10px 22px', background: '#6C2BD9', border: 'none', borderRadius: 8, color: 'white', cursor: 'pointer' }}>Log in again</button>
+                <button onClick={() => navigate('/login')} style={{ padding: '10px 22px', background: 'var(--sn-accent-strong)', border: 'none', borderRadius: 8, color: 'white', cursor: 'pointer' }}>Log in again</button>
             </div>
         );
     }
 
     return (
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#0A0A0A', color: 'white' }}>
+        <div className="sn-call-shell" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--sn-bg)', color: 'var(--sn-text)' }}>
             {/* Top */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 20px', background: '#111', borderBottom: '1px solid #222' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}><span style={{ color: '#9F67FF', fontWeight: 'bold' }}>SkillNest</span><span style={{ fontSize: 12, color: '#666', background: '#1a1a1a', padding: '4px 10px', borderRadius: 4 }}>{meetId}</span></div>
-                <span style={{ fontSize: 14, color: '#ccc', fontVariantNumeric: 'tabular-nums' }}>{timer}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 20px', background: 'var(--sn-surface)', borderBottom: '1px solid var(--sn-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}><span style={{ color: 'var(--sn-accent)', fontWeight: 'bold' }}>SkillNest</span><span style={{ fontSize: 12, color: 'var(--sn-muted)', background: 'var(--sn-raised)', padding: '4px 10px', borderRadius: 4 }}>{meetId}</span></div>
+                <span style={{ fontSize: 14, color: 'var(--sn-muted)', fontVariantNumeric: 'tabular-nums' }}>{timer}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ fontSize: 12, color: '#888' }}>{Object.keys(remoteStreams).length + 1} participants</span>
-                    <button onClick={() => setInviteOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 20, color: '#c4a5ff', fontSize: 12.5, cursor: 'pointer' }}>
+                    <span style={{ fontSize: 12, color: 'var(--sn-muted)' }}>{Object.keys(remoteStreams).length + 1} participants</span>
+                    <button onClick={() => setInviteOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: 'rgba(70,140,110,0.15)', border: '1px solid rgba(70,140,110,0.3)', borderRadius: 20, color: 'var(--sn-accent)', fontSize: 12.5, cursor: 'pointer' }}>
                         <span className="material-icons" style={{ fontSize: 16 }}>person_add</span> Invite
                     </button>
                 </div>
             </div>
 
+            <div className="sn-call-notice" role="status">{voiceOnly?'Audio call':'Video call'} · {callStatus}{mediaNotice&&<p>{mediaNotice}</p>}</div>
             {/* Video + Chat */}
-            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <div className="sn-call-body" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
                 <div style={{ flex: 1, display: 'grid', gridTemplateColumns: Object.keys(remoteStreams).length > 0 ? 'repeat(auto-fit,minmax(280px,1fr))' : '1fr', gap: 10, padding: 15, alignContent: 'center' }}>
-                    <div style={{ background: '#1F1F1F', borderRadius: 12, position: 'relative', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: 'var(--sn-raised)', borderRadius: 12, position: 'relative', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <video ref={localVideoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12, display: camOn || sharingScreen ? 'block' : 'none' }} />
                         {!camOn && !sharingScreen && <AvatarFallback avatarUrl={myAvatar} name={userName} />}
                         {sharingScreen && (
@@ -279,38 +305,38 @@ export default function MeetingRoom() {
                 </div>
 
                 {/* Chat */}
-                <div style={{ width: 280, background: '#111', borderLeft: '1px solid #222', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ padding: 12, borderBottom: '1px solid #222', fontSize: 14, fontWeight: 600 }}>Chat</div>
+                <div style={{ width: 280, background: 'var(--sn-surface)', borderLeft: '1px solid var(--sn-border)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: 12, borderBottom: '1px solid var(--sn-border)', fontSize: 14, fontWeight: 600 }}>Chat</div>
                     <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-                        {chatMsgs.map((m, i) => <div key={i} style={{ marginBottom: 8, fontSize: 13 }}><span style={{ color: '#9F67FF', fontWeight: 600 }}>{m.name}</span> <span style={{ color: '#555', fontSize: 11 }}>{m.time}</span><div style={{ color: '#ccc' }}>{m.text}</div></div>)}
+                        {chatMsgs.map((m, i) => <div key={i} style={{ marginBottom: 8, fontSize: 13 }}><span style={{ color: 'var(--sn-accent)', fontWeight: 600 }}>{m.name}</span> <span style={{ color: 'var(--sn-muted)', fontSize: 11 }}>{m.time}</span><div style={{ color: 'var(--sn-muted)' }}>{m.text}</div></div>)}
                     </div>
-                    <div style={{ display: 'flex', gap: 8, padding: 12, borderTop: '1px solid #222' }}>
-                        <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => { if (e.key === 'Enter') sendChat(); }} placeholder="Message..." style={{ flex: 1, padding: 8, background: '#1a1a1a', border: '1px solid #333', borderRadius: 6, color: 'white', fontSize: 13 }} />
-                        <button onClick={sendChat} style={{ padding: '8px 12px', background: '#6C2BD9', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer' }}><span className="material-icons" style={{ fontSize: 18 }}>send</span></button>
+                    <div style={{ display: 'flex', gap: 8, padding: 12, borderTop: '1px solid var(--sn-border)' }}>
+                        <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => { if (e.key === 'Enter') sendChat(); }} placeholder="Message..." style={{ flex: 1, padding: 8, background: 'var(--sn-raised)', border: '1px solid #333', borderRadius: 6, color: 'white', fontSize: 13 }} />
+                        <button onClick={sendChat} style={{ padding: '8px 12px', background: 'var(--sn-accent-strong)', border: 'none', borderRadius: 6, color: 'white', cursor: 'pointer' }}><span className="material-icons" style={{ fontSize: 18 }}>send</span></button>
                     </div>
                 </div>
             </div>
 
             {/* Controls */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 15, background: '#111', borderTop: '1px solid #222' }}>
-                <button onClick={toggleMic} style={btnStyle(micOn)}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>{micOn ? 'mic' : 'mic_off'}</span></button>
-                <button onClick={toggleCam} style={btnStyle(camOn)}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>{camOn ? 'videocam' : 'videocam_off'}</span></button>
+            <div className="sn-call-controls" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 15, background: 'var(--sn-surface)', borderTop: '1px solid var(--sn-border)' }}>
+                <button aria-label={micOn?'Mute microphone':'Unmute microphone'} title={micOn?'Mute microphone':'Unmute microphone'} onClick={toggleMic} style={btnStyle(micOn)}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>{micOn ? 'mic' : 'mic_off'}</span></button>
+                <button aria-label={camOn?'Turn camera off':'Turn camera on'} disabled={voiceOnly} title={voiceOnly?'Audio-only call':'Toggle camera'} onClick={toggleCam} style={btnStyle(camOn)}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>{camOn ? 'videocam' : 'videocam_off'}</span></button>
                 <button onClick={sharingScreen ? stopScreenShare : startScreenShare} title={sharingScreen ? 'Stop sharing' : 'Share screen'} style={btnStyle(!sharingScreen, sharingScreen ? '#34c759' : undefined)}>
                     <span className="material-icons" style={{ color: 'white', fontSize: 22 }}>{sharingScreen ? 'stop_screen_share' : 'screen_share'}</span>
                 </button>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#8892b0', cursor: sharingScreen ? 'default' : 'pointer', userSelect: 'none' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--sn-muted)', cursor: sharingScreen ? 'default' : 'pointer', userSelect: 'none' }}>
                     <input type="checkbox" checked={shareAudioEnabled} disabled={sharingScreen} onChange={e => setShareAudioEnabled(e.target.checked)} />
                     Share audio too
                 </label>
-                <button onClick={endMeeting} style={{ ...btnStyle(false, '#ff4d4d'), width: 54, borderRadius: 12 }}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>call_end</span></button>
+                <button aria-label="Leave call" title="Leave call" onClick={endMeeting} style={{ ...btnStyle(false, '#ff4d4d'), width: 54, borderRadius: 12 }}><span className="material-icons" style={{ color: 'white', fontSize: 22 }}>call_end</span></button>
             </div>
 
             {connecting && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,10,10,0.92)', zIndex: 600, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                    <span className="material-icons" style={{ fontSize: 32, color: '#A855F7' }}>sync</span>
+                    <span className="material-icons" style={{ fontSize: 32, color: 'var(--sn-accent)' }}>sync</span>
                     <p style={{ color: 'white', fontSize: 15 }}>Connecting to session...</p>
                     {slowConnect && (
-                        <p style={{ color: '#8892b0', fontSize: 13, maxWidth: 320, textAlign: 'center' }}>
+                        <p style={{ color: 'var(--sn-muted)', fontSize: 13, maxWidth: 320, textAlign: 'center' }}>
                             Taking longer than usual — the server may just be waking up from being idle. Hang tight a little longer.
                         </p>
                     )}
@@ -322,7 +348,7 @@ export default function MeetingRoom() {
                     <div style={{ background: '#0d1025', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, width: 440, maxWidth: '90vw', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 22px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                             <h3 style={{ fontSize: 16 }}>Invite to this session</h3>
-                            <button onClick={() => setInviteOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><span className="material-icons" style={{ color: '#888', fontSize: 22 }}>close</span></button>
+                            <button onClick={() => setInviteOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><span className="material-icons" style={{ color: 'var(--sn-muted)', fontSize: 22 }}>close</span></button>
                         </div>
                         <div style={{ padding: 20 }}>
                             <InvitePanel meetCode={meetId} />
@@ -339,7 +365,7 @@ function RemoteVideo({ stream, peer }) {
     useEffect(() => { if (ref.current) ref.current.srcObject = stream; }, [stream]);
     const camOff = peer?.camOff;
     return (
-        <div style={{ background: '#1F1F1F', borderRadius: 12, position: 'relative', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ background: 'var(--sn-raised)', borderRadius: 12, position: 'relative', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <video ref={ref} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12, display: camOff ? 'none' : 'block' }} />
             {camOff && <AvatarFallback avatarUrl={peer?.avatarUrl} />}
             {peer?.sharing && (
@@ -366,8 +392,8 @@ function AvatarFallback({ avatarUrl, name }) {
             ) : (
                 <div style={{ width: 84, height: 84, borderRadius: '50%', background: '#2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg viewBox="0 0 100 100" width="60%" height="60%">
-                        <circle cx="50" cy="36" r="20" fill="#666" />
-                        <path d="M15 95 C15 65 35 55 50 55 C65 55 85 65 85 95 Z" fill="#666" />
+                        <circle cx="50" cy="36" r="20" fill="var(--sn-muted)" />
+                        <path d="M15 95 C15 65 35 55 50 55 C65 55 85 65 85 95 Z" fill="var(--sn-muted)" />
                     </svg>
                 </div>
             )}

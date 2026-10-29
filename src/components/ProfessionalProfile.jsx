@@ -1,0 +1,10 @@
+import React,{useEffect,useState} from 'react';
+import {Link} from 'react-router-dom';
+import {api} from '../utils/api';
+import {getCurrentUser} from '../utils/auth';
+export default function ProfessionalProfile(){
+    const [profile,setProfile]=useState({headline:'',about:'',linkedin_url:''}),[ready,setReady]=useState(false),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
+    useEffect(()=>{api('/api/auth/professional-profile').then(d=>{setProfile(d.profile);setReady(true);}).catch(e=>setNotice(e.message));},[]);
+    async function save(e){e.preventDefault();setBusy(true);setNotice('');try{const d=await api('/api/auth/professional-profile',{method:'PUT',body:JSON.stringify(profile)});setProfile(d.profile);setNotice('Your public profile has been updated.');}catch(e){setNotice(e.message);}finally{setBusy(false);}}
+    return <form className="sn-professional-card" onSubmit={save}><span className="sn-eyebrow">YOUR PROFESSIONAL PRESENCE</span><h2>Let people know what you’re building</h2><p>Your headline, introduction and LinkedIn link appear on your SkillNest profile.</p><label>Headline<input maxLength={160} value={profile.headline||''} onChange={e=>setProfile({...profile,headline:e.target.value})} placeholder="Student developer · Building with React and Python"/></label><label>About<textarea rows={4} maxLength={2000} value={profile.about||''} onChange={e=>setProfile({...profile,about:e.target.value})} placeholder="Your interests, current projects and what you can help with"/></label><label>LinkedIn profile URL<input type="url" maxLength={500} value={profile.linkedin_url||''} onChange={e=>setProfile({...profile,linkedin_url:e.target.value})} placeholder="https://www.linkedin.com/in/your-name"/></label><p className="sn-muted">An external profile link, not account verification or automatic LinkedIn syncing.</p><div className="sn-profile-actions"><button disabled={!ready||busy}>{busy?'Saving…':'Save public profile'}</button><Link to={`/u/${getCurrentUser()?.id}`}>View my profile ↗</Link></div>{notice&&<p role="status">{notice}</p>}</form>;
+}

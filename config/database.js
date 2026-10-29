@@ -53,6 +53,7 @@ async function initDatabase() {
         // Every account's own photo (learners included — mentor_profiles.profile_photo
         // only ever covered mentors). Stored as a data URL, same as mentor photos.
         await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT ''`).catch(() => { });
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS linkedin_url VARCHAR(500) DEFAULT '', ADD COLUMN IF NOT EXISTS headline VARCHAR(160) DEFAULT '', ADD COLUMN IF NOT EXISTS about TEXT DEFAULT ''`);
         await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_users_email
     ON users(email);
@@ -211,6 +212,7 @@ async function initDatabase() {
             )
         `);
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_messages_pair ON messages(sender_id, recipient_id, created_at)`);
+        await require('./messageSchema')(pool);
         console.log("✅ Connections & Messages tables ready");
 
         // Enrollments — a mentor's "Students" list should be people who
@@ -247,6 +249,7 @@ async function initDatabase() {
         await pool.query(`CREATE INDEX IF NOT EXISTS idx_course_reviews_course ON course_reviews(course_id)`);
         console.log("✅ Course reviews table ready");
         await require('./learningSchema')(pool);
+        await require('./helpSchema')(pool);
         console.log('✅ Learning and research tables ready');
         pool.initialized = true;
     } catch (err) {

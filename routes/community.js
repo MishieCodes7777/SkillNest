@@ -3,6 +3,13 @@ const router = express.Router();
 const pool = require("../config/database");
 const { verifyToken } = require("../middleware/auth");
 const { notify } = require("../utils/notify");
+router.use('/posts/:id',verifyToken,async(req,res,next)=>{
+    if(req.params.id === 'user') return next(); // Profile feeds have their own visibility filter below.
+    if(!/^[1-9]\d*$/.test(req.params.id))return res.status(400).json({success:false,message:'Invalid post.'});
+    try{const p=(await pool.query('SELECT user_id FROM posts WHERE id=$1',[req.params.id])).rows[0];
+        if(!p||await require('../services/helpAccess').blocked(pool,req.user.id,p.user_id))return res.status(404).json({success:false,message:'Post unavailable.'});next();
+    }catch(e){next(e);}
+});
 
 const FEED_SELECT = `
     SELECT p.id, p.content, p.image_url, p.created_at, p.user_id,
@@ -34,7 +41,7 @@ function serializePost(row) {
 router.get("/posts", verifyToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `${FEED_SELECT} GROUP BY p.id, u.id, mp.profile_photo ORDER BY p.created_at DESC LIMIT 50`,
+            `${FEED_SELECT} WHERE NOT ${require('../services/helpAccess').blockSQL('p.user_id','$1::int')} GROUP BY p.id, u.id, mp.profile_photo ORDER BY p.created_at DESC LIMIT 50`,
             [req.user.id]
         );
         res.json({ success: true, posts: result.rows.map(serializePost) });
@@ -48,7 +55,7 @@ router.get("/posts", verifyToken, async (req, res) => {
 router.get("/posts/user/:userId", verifyToken, async (req, res) => {
     try {
         const result = await pool.query(
-            `${FEED_SELECT} WHERE p.user_id = $2 GROUP BY p.id, u.id, mp.profile_photo ORDER BY p.created_at DESC LIMIT 50`,
+            `${FEED_SELECT} WHERE p.user_id = $2 AND NOT ${require('../services/helpAccess').blockSQL('p.user_id','$1::int')} GROUP BY p.id, u.id, mp.profile_photo ORDER BY p.created_at DESC LIMIT 50`,
             [req.user.id, req.params.userId]
         );
         res.json({ success: true, posts: result.rows.map(serializePost) });
@@ -129,8 +136,8 @@ router.get("/posts/:id/comments", verifyToken, async (req, res) => {
         const result = await pool.query(
             `SELECT pc.id, pc.content, pc.created_at, pc.user_id, u.name, u.username, u.role
              FROM post_comments pc JOIN users u ON u.id = pc.user_id
-             WHERE pc.post_id = $1 ORDER BY pc.created_at ASC`,
-            [req.params.id]
+             WHERE pc.post_id = $1 AND NOT ${require('../services/helpAccess').blockSQL('pc.user_id','$2::int')} ORDER BY pc.created_at ASC LIMIT 200`,
+            [req.params.id,req.user.id]
         );
         res.json({ success: true, comments: result.rows });
     } catch (err) {

@@ -1,0 +1,3 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');const {linkedinUrl}=require('../services/profileLinks');
+test('LinkedIn profile links are canonical and support removal',()=>{assert.equal(linkedinUrl('https://linkedin.com/in/example/?trk=test'),'https://www.linkedin.com/in/example');assert.equal(linkedinUrl(''),'');});
+test('LinkedIn rejects lookalike hosts, scripts, credentials and non-profile paths',()=>{for(const value of ['javascript:alert(1)','https://linkedin.com.evil.test/in/a','https://evil.test/in/a','https://user@linkedin.com/in/a','https://linkedin.com/company/a','http://linkedin.com/in/a'])assert.throws(()=>linkedinUrl(value));});

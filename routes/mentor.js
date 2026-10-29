@@ -50,7 +50,7 @@ router.put("/profile", verifyToken, async (req, res) => {
                 hourly_rate = COALESCE($12, mentor_profiles.hourly_rate),
                 custom_links = COALESCE($13, mentor_profiles.custom_links),
                 updated_at = NOW()
-        `, [req.user.id, bio || '', JSON.stringify(skills || []), JSON.stringify(categories || []), JSON.stringify(languages || ['English']), experience || '', linkedin || '', github || '', portfolio || '', twitter || '', profile_photo || '', hourly_rate || 0, JSON.stringify(customLinks || [])]);
+        `, [req.user.id, bio || '', JSON.stringify(skills || []), JSON.stringify(categories || []), JSON.stringify(languages || ['English']), experience || '', linkedin === undefined ? null : linkedin || '', github || '', portfolio || '', twitter || '', profile_photo || '', hourly_rate || 0, JSON.stringify(customLinks || [])]);
 
         res.json({ success: true, message: "Profile updated!" });
     } catch (err) {
@@ -62,7 +62,7 @@ router.put("/profile", verifyToken, async (req, res) => {
 // GET /api/mentor/profile/:userId - Get public mentor profile
 router.get("/profile/:userId", async (req, res) => {
     try {
-        const profile = await pool.query("SELECT mp.*, u.name, u.email, u.username FROM mentor_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.user_id = $1", [req.params.userId]);
+        const profile = await pool.query("SELECT mp.*, u.name, u.username FROM mentor_profiles mp JOIN users u ON u.id = mp.user_id WHERE mp.user_id = $1", [req.params.userId]);
         if (profile.rows.length === 0) return res.status(404).json({ success: false });
         res.json({ success: true, profile: profile.rows[0] });
     } catch (err) {

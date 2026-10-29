@@ -3,6 +3,7 @@ import AppLayout from '../components/AppLayout';
 import { getCurrentUser, getUserData } from '../utils/auth';
 import { trackActivity } from '../utils/missions';
 import '../styles/profile.css';
+import ProfessionalProfile from '../components/ProfessionalProfile';
 
 export default function Profile() {
     const user = getCurrentUser();
@@ -141,6 +142,7 @@ export default function Profile() {
         <AppLayout>
             <div className="profile-container">
                 <h1 className="page-title">My Profile</h1>
+                <ProfessionalProfile />
 
                 <div className="profile-card">
                     <div className="profile-avatar-wrap">
@@ -148,24 +150,24 @@ export default function Profile() {
                     </div>
                     <div className="profile-details">
                         <h2>{user?.name || 'User'}</h2>
-                        <p style={{ color: '#A855F7', fontSize: 14 }}>{user?.username ? `@${user.username}` : ''}</p>
-                        <p style={{ color: '#8892b0', fontSize: 13 }}>{user?.email}</p>
+                        <p style={{ color: 'var(--sn-accent)', fontSize: 14 }}>{user?.username ? `@${user.username}` : ''}</p>
+                        <p style={{ color: 'var(--sn-muted)', fontSize: 13 }}>{user?.email}</p>
                         <span className={`profile-role role-${user?.role}`}>{user?.role}</span>
                     </div>
                     <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <button className="edit-btn" onClick={() => setEditOpen(true)}><span className="material-icons">edit</span> Edit</button>
-                        <button className="edit-btn" onClick={() => setUsernameModal(true)} style={{ borderColor: '#A855F7', color: '#A855F7' }}><span className="material-icons">alternate_email</span> {hasUsername ? 'Change' : 'Set'} Username</button>
+                        <button className="edit-btn" onClick={() => setUsernameModal(true)} style={{ borderColor: 'var(--sn-accent)', color: 'var(--sn-accent)' }}><span className="material-icons">alternate_email</span> {hasUsername ? 'Change' : 'Set'} Username</button>
                         <button className="edit-btn" onClick={() => setPasswordModal(true)}><span className="material-icons">lock</span> Change Password</button>
                     </div>
                 </div>
 
                 <div className="info-grid">
                     <div className="info-card"><h4>Full Name</h4><p>{user?.name}</p></div>
-                    <div className="info-card"><h4>Username</h4><p style={{ color: user?.username ? '#A855F7' : '#ff4d4d' }}>{user?.username ? `@${user.username}` : '⚠ Not set'}</p></div>
+                    <div className="info-card"><h4>Username</h4><p style={{ color: user?.username ? 'var(--sn-accent)' : '#ff4d4d' }}>{user?.username ? `@${user.username}` : '⚠ Not set'}</p></div>
                     <div className="info-card"><h4>Email</h4><p>{user?.email}</p></div>
                     <div className="info-card"><h4>Role</h4><p style={{ textTransform: 'capitalize' }}>{user?.role}</p></div>
                     <div className="info-card"><h4>Member Since</h4><p>{getMemberSince(user)}</p></div>
-                    <div className="info-card"><h4>Current Streak</h4><p style={{ color: '#A855F7' }}>{data.streak} days</p></div>
+                    <div className="info-card"><h4>Current Streak</h4><p style={{ color: 'var(--sn-accent)' }}>{data.streak} days</p></div>
                 </div>
 
                 <div className="stats-grid-profile">
@@ -205,13 +207,13 @@ export default function Profile() {
                         <div className="modal" onClick={e => e.stopPropagation()}>
                             <div className="modal-header"><h3>{hasUsername ? 'Change' : 'Set'} Username</h3><button onClick={() => setUsernameModal(false)} className="modal-close"><span className="material-icons">close</span></button></div>
                             <div className="modal-body">
-                                <p style={{ fontSize: 13, color: '#8892b0', marginBottom: 15 }}>
+                                <p style={{ fontSize: 13, color: 'var(--sn-muted)', marginBottom: 15 }}>
                                     {hasUsername ? 'You can change your username up to 3 times per month.' : 'Set a unique username for your profile.'}
                                 </p>
                                 <div className="modal-input">
                                     <label>Username</label>
                                     <input value={newUsername} onChange={e => checkUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))} placeholder="e.g. bhavya.k" />
-                                    <span style={{ fontSize: 11, color: '#555', display: 'block', marginTop: 4 }}>Lowercase letters, numbers, dots, underscores</span>
+                                    <span style={{ fontSize: 11, color: 'var(--sn-muted)', display: 'block', marginTop: 4 }}>Lowercase letters, numbers, dots, underscores</span>
                                     {usernameStatus && <span style={{ fontSize: 12, color: '#34c759', display: 'block', marginTop: 4 }}>{usernameStatus}</span>}
                                     {usernameError && <span style={{ fontSize: 12, color: '#ff4d4d', display: 'block', marginTop: 4 }}>{usernameError}</span>}
                                 </div>
@@ -242,7 +244,7 @@ export default function Profile() {
                                     <label>Confirm New Password</label>
                                     <input type={showPw ? 'text' : 'password'} value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="Re-enter the new password" style={{ paddingRight: 40 }} />
                                 </div>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#8892b0', marginBottom: 15, cursor: 'pointer' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--sn-muted)', marginBottom: 15, cursor: 'pointer' }}>
                                     <input type="checkbox" checked={showPw} onChange={e => setShowPw(e.target.checked)} /> Show passwords
                                 </label>
                                 {pwError && <p style={{ color: '#ff8080', fontSize: 12.5, marginBottom: 10 }}>{pwError}</p>}

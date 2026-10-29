@@ -6,8 +6,8 @@
 
 /* AI Daily Brief */
 .daily-brief {
-    background: linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(255, 79, 163, 0.05));
-    border: 1px solid rgba(168, 85, 247, 0.2);
+    background: linear-gradient(135deg, rgba(70,140,110, 0.08), rgba(70,140,110, 0.05));
+    border: 1px solid rgba(70,140,110, 0.2);
     border-radius: 18px;
     padding: 28px;
     margin-bottom: 25px;
@@ -20,7 +20,7 @@
 }
 
 .db-header p {
-    color: #8892b0;
+    color: var(--sn-muted);
     font-size: 14px;
     padding-left: 50px;
     margin-bottom: 18px;
@@ -55,7 +55,7 @@
 
 .db-item p {
     font-size: 12px;
-    color: #8892b0;
+    color: var(--sn-muted);
     margin: 0;
 }
 
@@ -69,14 +69,14 @@
 
 .db-recommendation strong {
     font-size: 13px;
-    color: #A855F7;
+    color: var(--sn-accent);
     display: block;
     margin-bottom: 6px;
 }
 
 .db-recommendation p {
     font-size: 13px;
-    color: #ccc;
+    color: var(--sn-muted);
     line-height: 1.6;
     margin: 0;
 }
@@ -84,9 +84,9 @@
 .db-cta-btn {
     display: inline-block;
     padding: 10px 24px;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     border-radius: 8px;
-    color: white;
+    color:var(--sn-text);
     font-size: 14px;
     font-weight: 600;
 }
@@ -110,7 +110,7 @@
 
 .stat-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(168, 85, 247, 0.3);
+    border-color: rgba(70,140,110, 0.3);
 }
 
 .stat-icon {
@@ -125,7 +125,7 @@
 
 .stat-label {
     font-size: 11px;
-    color: #8892b0;
+    color: var(--sn-muted);
     margin-top: 2px;
 }
 
@@ -160,12 +160,12 @@
 
 .dash-card h3 .material-icons {
     font-size: 18px;
-    color: #FF4FA3;
+    color: var(--sn-accent);
 }
 
 /* Missions */
 .missions-card {
-    border-color: rgba(168, 85, 247, 0.15);
+    border-color: rgba(70,140,110, 0.15);
 }
 
 .mission-progress {
@@ -174,7 +174,7 @@
 
 .mission-progress span {
     font-size: 13px;
-    color: #8892b0;
+    color: var(--sn-muted);
     display: block;
     margin-bottom: 6px;
 }
@@ -188,7 +188,7 @@
 
 .mp-fill {
     height: 100%;
-    background: linear-gradient(90deg, #FF4FA3, #A855F7);
+    background: linear-gradient(90deg, var(--sn-accent), var(--sn-accent));
     border-radius: 10px;
     transition: width 0.5s;
 }
@@ -213,7 +213,7 @@
 
 .mission-row.done .mission-text {
     text-decoration: line-through;
-    color: #555;
+    color: var(--sn-muted);
 }
 
 .mission-check {
@@ -224,12 +224,12 @@
 .mission-text {
     flex: 1;
     font-size: 14px;
-    color: #ccc;
+    color: var(--sn-muted);
 }
 
 .mission-xp {
     font-size: 12px;
-    color: #A855F7;
+    color: var(--sn-accent);
     font-weight: 600;
 }
 
@@ -248,16 +248,16 @@
 .xp-tag {
     margin-left: auto;
     font-size: 11px;
-    background: rgba(168, 85, 247, 0.15);
-    color: #c4a5ff;
+    background: rgba(70,140,110, 0.15);
+    color: var(--sn-accent);
     padding: 3px 8px;
     border-radius: 10px;
 }
 
 /* Focus Card */
 .focus-card {
-    background: linear-gradient(135deg, rgba(255, 79, 163, 0.06), rgba(168, 85, 247, 0.04));
-    border-color: rgba(255, 79, 163, 0.15);
+    background: linear-gradient(135deg, rgba(70,140,110, 0.06), rgba(70,140,110, 0.04));
+    border-color: rgba(70,140,110, 0.15);
 }
 
 .focus-topic {
@@ -268,18 +268,18 @@
 
 .focus-confidence {
     font-size: 13px;
-    color: #8892b0;
+    color: var(--sn-muted);
     margin-bottom: 6px;
 }
 
 .focus-confidence span {
-    color: #A855F7;
+    color: var(--sn-accent);
     font-weight: 600;
 }
 
 .focus-reason-text {
     font-size: 13px;
-    color: #666;
+    color: var(--sn-muted);
     margin-bottom: 12px;
     line-height: 1.5;
 }
@@ -291,27 +291,27 @@
 
 .focus-btn {
     padding: 7px 14px;
-    background: rgba(168, 85, 247, 0.1);
-    border: 1px solid rgba(168, 85, 247, 0.2);
+    background: rgba(70,140,110, 0.1);
+    border: 1px solid rgba(70,140,110, 0.2);
     border-radius: 6px;
-    color: #c4a5ff;
+    color: var(--sn-accent);
     font-size: 12px;
     font-weight: 600;
 }
 
 .focus-btn:hover {
-    background: rgba(168, 85, 247, 0.2);
+    background: rgba(70,140,110, 0.2);
 }
 
 /* AI Coach */
 .ai-coach-card {
-    background: linear-gradient(135deg, rgba(168, 85, 247, 0.06), rgba(255, 79, 163, 0.03));
-    border-color: rgba(168, 85, 247, 0.15);
+    background: linear-gradient(135deg, rgba(70,140,110, 0.06), rgba(70,140,110, 0.03));
+    border-color: rgba(70,140,110, 0.15);
 }
 
 .coach-msg {
     font-size: 14px;
-    color: #ccc;
+    color: var(--sn-muted);
     line-height: 1.6;
     margin-bottom: 14px;
 }
@@ -323,9 +323,9 @@
 
 .coach-btn {
     padding: 8px 16px;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     border-radius: 8px;
-    color: white;
+    color:var(--sn-text);
     font-size: 13px;
     font-weight: 600;
 }
@@ -333,7 +333,7 @@
 .coach-btn.secondary {
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
+    color:var(--sn-text);
 }
 
 /* Arena Snapshot */
@@ -349,11 +349,11 @@
     justify-content: space-between;
     font-size: 13px;
     padding: 6px 0;
-    color: #8892b0;
+    color: var(--sn-muted);
 }
 
 .as-row strong {
-    color: white;
+    color:var(--sn-text);
 }
 
 .as-progress {
@@ -365,7 +365,7 @@
 
 .as-fill {
     height: 100%;
-    background: linear-gradient(90deg, #FF4FA3, #A855F7);
+    background: linear-gradient(90deg, var(--sn-accent), var(--sn-accent));
     border-radius: 10px;
     transition: width 1s;
 }
@@ -404,13 +404,13 @@
 }
 
 .empty-hint {
-    color: #555;
+    color: var(--sn-muted);
     font-size: 13px;
     margin-bottom: 10px;
 }
 
 .view-all-link {
-    color: #A855F7;
+    color: var(--sn-accent);
     font-size: 13px;
     font-weight: 600;
     display: block;
@@ -429,7 +429,7 @@
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 8px;
-    color: white;
+    color:var(--sn-text);
     font-size: 12px;
     display: flex;
     align-items: center;
@@ -438,13 +438,13 @@
 }
 
 .qa-btn:hover {
-    background: rgba(255, 79, 163, 0.08);
-    border-color: #FF4FA3;
+    background: rgba(70,140,110, 0.08);
+    border-color: var(--sn-accent);
 }
 
 .qa-btn .material-icons {
     font-size: 16px;
-    color: #FF4FA3;
+    color: var(--sn-accent);
 }
 
 /* Analytics */
@@ -465,12 +465,12 @@
 .a-val {
     font-size: 20px;
     font-weight: 700;
-    color: #A855F7;
+    color: var(--sn-accent);
 }
 
 .a-label {
     font-size: 11px;
-    color: #8892b0;
+    color: var(--sn-muted);
     margin-top: 2px;
 }
 
@@ -491,7 +491,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #FF4FA3;
+    background: var(--sn-accent);
     margin-top: 6px;
     flex-shrink: 0;
 }
@@ -502,7 +502,7 @@
 
 .timeline-item p {
     font-size: 11px;
-    color: #8892b0;
+    color: var(--sn-muted);
 }
 
 @media (max-width:1024px) {

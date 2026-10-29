@@ -105,7 +105,7 @@ router.post("/roadmap", verifyToken, async (req, res) => {
     try {
         const { skills = '', goal, hours = 10 } = req.body;
         if (typeof goal !== 'string' || !goal.trim() || goal.length > 300 || typeof skills !== 'string' || skills.length > 1000 || !Number.isInteger(Number(hours)) || Number(hours) < 1 || Number(hours) > 40) return res.status(400).json({ success: false, message: 'Enter a goal, skills, and 1–40 hours per week.' });
-        const attempts = (await pool.query('SELECT question_id,topic,correct FROM learning_attempts WHERE user_id=$1 ORDER BY created_at,id', [req.user.id])).rows;
+        const attempts = req.body.useProgress === false ? [] : (await pool.query('SELECT question_id,topic,correct FROM learning_attempts WHERE user_id=$1 ORDER BY created_at,id', [req.user.id])).rows;
         const evidence = summarise(attempts).filter(t => t.attempts).map(t => `${t.name}: ${t.accuracy}% correct across ${t.attempts} practice answers; ${t.distinctQuestions} distinct questions`).join('; ');
 
         const prompt = `You are a curriculum designer. A learner currently knows: "${skills || 'nothing specific yet'}". Their goal is: "${goal}". They can study ${hours || 10} hours per week.

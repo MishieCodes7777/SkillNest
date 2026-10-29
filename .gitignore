@@ -4,7 +4,22 @@ tempCodeRunnerFile.js
 tempCodeRunnerFile.zip
 dist/
 ml/data/
+ml/artifacts/
 ml/__pycache__/
 tests/__pycache__/
 .preview-logs/
 test-results/
+
+.env.*
+!.env.example
+*.dump
+*.sql.gz
+# Private pitch notes and local credential/backup material.
+/AGENTS.md
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.sqlite3
+*.log

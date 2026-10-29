@@ -25,6 +25,7 @@ export default function InvitePanel({ meetCode }) {
     }, []);
 
     const filtered = users
+        .filter(u => connectedIds.has(String(u.id)))
         .filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
         .sort((a, b) => {
             const aConn = connectedIds.has(String(a.id)) ? 0 : 1;
@@ -39,11 +40,12 @@ export default function InvitePanel({ meetCode }) {
     async function invite(user) {
         setInvited(prev => [...prev, user.id]);
         try {
-            await fetch('/api/notifications/session-invite', {
+            const response = await fetch('/api/notifications/session-invite', {
                 method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ toUserId: user.id, meetingCode: meetCode }),
             });
-        } catch (e) { setInvited(prev => prev.filter(id => id !== user.id)); }
+            if(!response.ok)throw new Error((await response.json()).message);
+        } catch (e) { alert(e.message || 'Invitation failed');setInvited(prev => prev.filter(id => id !== user.id)); }
     }
 
     return (

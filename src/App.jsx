@@ -24,6 +24,8 @@ const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const BecomeMentor = lazy(() => import('./pages/BecomeMentor'));
 const AdminMentorApplications = lazy(() => import('./pages/AdminMentorApplications'));
 const LearningHub = lazy(() => import('./pages/LearningHub'));
+const SmartHelp = lazy(() => import('./pages/SmartHelp'));
+const TopicLab = lazy(() => import('./pages/TopicLab'));
 const ResearchProfile = lazy(() => import('./pages/ResearchProfile'));
 const ResearchPapers = lazy(() => import('./pages/ResearchPapers'));
 const ResearchMatches = lazy(() => import('./pages/ResearchMatches'));
@@ -46,9 +48,11 @@ function Loading() {
     );
 }
 
+import ThemeToggle from './components/ThemeToggle';
 function App() {
     return (
         <Router>
+            <ThemeToggle />
             <Suspense fallback={<Loading />}>
                 <Routes>
                     <Route path="/" element={<Home />} />
@@ -58,7 +62,13 @@ function App() {
                     <Route path="/reset-password/:token" element={<ResetPassword />} />
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/learning" element={<LearningHub />} />
+                    <Route path="/help" element={<SmartHelp />} />
+                    <Route path="/help/ask" element={<SmartHelp />} />
+                    <Route path="/help/manage" element={<SmartHelp />} />
+                    <Route path="/help/:id" element={<SmartHelp />} />
+                    <Route path="/mentor/help" element={<SmartHelp />} />
                     <Route path="/preview" element={<LearningHub preview />} />
+                    <Route path="/preview/ml" element={<TopicLab />} />
                     <Route path="/preview/research" element={<ResearchProfile preview />} />
                     <Route path="/preview/research/papers" element={<ResearchPapers preview />} />
                     <Route path="/preview/research-match" element={<ResearchMatches preview />} />

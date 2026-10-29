@@ -72,17 +72,18 @@ export default function CommunityFeed({ filterUserId }) {
             const res = await fetch(`/api/community/posts/${post.id}/like`, { method: 'POST', headers: authHeaders() });
             const data = await res.json();
             if (data.success) setPosts(prev => prev.map(p => p.id === post.id ? { ...p, liked_by_me: data.liked, like_count: data.like_count } : p));
-        } catch (e) { /* optimistic state stands; a refresh will reconcile */ }
+            else {setError(data.message||'Could not update reaction.');load();}
+        } catch (e) { setError('Could not update reaction.');load(); }
     }
 
     async function removePost(post) {
         if (!confirm('Delete this post?')) return;
-        setPosts(prev => prev.filter(p => p.id !== post.id));
-        await fetch(`/api/community/posts/${post.id}`, { method: 'DELETE', headers: authHeaders() }).catch(() => { });
+        try{const res=await fetch(`/api/community/posts/${post.id}`,{method:'DELETE',headers:authHeaders()});const data=await res.json();if(!data.success)throw Error(data.message||'Could not delete post.');setPosts(prev=>prev.filter(p=>p.id!==post.id));}catch(e){setError(e.message);}
     }
 
     return (
         <div className="cf-wrap">
+            {!filterUserId && <Link to="/help" style={{display:'block',marginBottom:16,color:'var(--sn-accent)'}}>Need help with a specific problem? Ask Smart Help →</Link>}
             {!filterUserId && (
                 <div className="cf-composer">
                     <Avatar author={{ name: me?.name, profile_photo: '' }} size={44} />
@@ -125,6 +126,8 @@ function Post({ post, me, onLike, onDelete }) {
     const [comments, setComments] = useState(null);
     const [commentInput, setCommentInput] = useState('');
     const [commentCount, setCommentCount] = useState(post.comment_count);
+    const [commentError, setCommentError] = useState('');
+    const [commentBusy, setCommentBusy] = useState(false);
     const isMine = String(post.author.id) === String(me?.id);
 
     function openComments() {
@@ -137,16 +140,19 @@ function Post({ post, me, onLike, onDelete }) {
     }
 
     async function addComment() {
-        if (!commentInput.trim()) return;
+        if (!commentInput.trim() || commentBusy) return;
         const text = commentInput.trim();
-        setCommentInput('');
+        setCommentBusy(true); setCommentError('');
         try {
             const res = await fetch(`/api/community/posts/${post.id}/comments`, {
                 method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ content: text }),
             });
             const data = await res.json();
-            if (data.success) { setComments(prev => [...(prev || []), data.comment]); setCommentCount(c => c + 1); }
-        } catch (e) { }
+            if (!data.success) throw Error(data.message || 'Could not post your comment.');
+            setComments(prev => [...(prev || []), data.comment]); setCommentCount(c => c + 1);
+            setCommentInput(current => current.trim() === text ? '' : current);
+        } catch (e) { setCommentError(e.message || 'Could not post your comment. Your draft is preserved.'); }
+        finally { setCommentBusy(false); }
     }
 
     return (
@@ -176,6 +182,7 @@ function Post({ post, me, onLike, onDelete }) {
 
             {commentsOpen && (
                 <div className="cf-comments">
+                    {commentError && <p role="alert">{commentError}</p>}
                     {comments === null && <div className="cf-comments-loading">Loading comments...</div>}
                     {comments?.map(c => (
                         <div className="cf-comment" key={c.id}>
@@ -189,7 +196,7 @@ function Post({ post, me, onLike, onDelete }) {
                     ))}
                     <div className="cf-comment-input-row">
                         <input value={commentInput} onChange={e => setCommentInput(e.target.value)} placeholder="Write a comment..." onKeyPress={e => { if (e.key === 'Enter') addComment(); }} />
-                        <button onClick={addComment} disabled={!commentInput.trim()}><span className="material-icons">send</span></button>
+                        <button onClick={addComment} disabled={commentBusy || !commentInput.trim()} aria-label="Post comment"><span className="material-icons">send</span></button>
                     </div>
                 </div>
             )}

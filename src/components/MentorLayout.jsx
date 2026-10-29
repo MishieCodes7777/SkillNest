@@ -5,10 +5,11 @@ import '../styles/mentor.css';
 
 const mentorNav = [
     { path: '/mentor/dashboard', icon: 'dashboard', label: 'Dashboard' },
+    { path: '/mentor/help', icon: 'support_agent', label: 'Smart Help' },
     { path: '/mentor/courses', icon: 'school', label: 'My Courses' },
     { path: '/mentor/students', icon: 'people', label: 'Students' },
     { path: '/mentor/sessions', icon: 'videocam', label: 'Sessions' },
-    { path: '/mentor/community', icon: 'forum', label: 'Community' },
+    { path: '/mentor/community', icon: 'forum', label: 'Community Feed' },
     { path: '/mentor/resources', icon: 'folder', label: 'Resources' },
     { path: '/mentor/research', icon: 'science', label: 'Research Profile' },
     { path: '/mentor/earnings', icon: 'payments', label: 'Earnings' },
@@ -38,7 +39,7 @@ export default function MentorLayout({ children }) {
 
     if (!isLoggedIn() || !isMentor) return null;
 
-    const ddLinkStyle = { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', color: '#ccc', fontSize: 13, cursor: 'pointer', transition: '0.2s' };
+    const ddLinkStyle = { display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', color: 'var(--sn-muted)', fontSize: 13, cursor: 'pointer', transition: '0.2s' };
 
     return (
         <div className="mentor-app">
@@ -72,10 +73,10 @@ export default function MentorLayout({ children }) {
                             <div className="m-avatar" onClick={() => setAvatarOpen(!avatarOpen)}>{user?.name?.charAt(0).toUpperCase()}</div>
                             {avatarOpen && (
                                 <div style={{ position: 'absolute', top: 42, right: 0, minWidth: 200, background: 'rgba(12,12,30,0.98)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '8px 0', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', zIndex: 60 }}>
-                                    <div style={{ padding: '10px 16px', fontSize: 13, color: '#8892b0', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{user?.name}</div>
-                                    <div onClick={() => { setAvatarOpen(false); navigate('/mentor/settings'); }} style={ddLinkStyle}><span className="material-icons" style={{ fontSize: 18, color: '#8892b0' }}>person</span> Mentor Profile</div>
-                                    <div onClick={() => { setAvatarOpen(false); navigate('/mentor/dashboard'); }} style={ddLinkStyle}><span className="material-icons" style={{ fontSize: 18, color: '#8892b0' }}>dashboard</span> Dashboard</div>
-                                    <div onClick={() => { setAvatarOpen(false); navigate('/dashboard'); }} style={ddLinkStyle}><span className="material-icons" style={{ fontSize: 18, color: '#8892b0' }}>swap_horiz</span> Switch to Student</div>
+                                    <div style={{ padding: '10px 16px', fontSize: 13, color: 'var(--sn-muted)', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>{user?.name}</div>
+                                    <div onClick={() => { setAvatarOpen(false); navigate('/mentor/settings'); }} style={ddLinkStyle}><span className="material-icons" style={{ fontSize: 18, color: 'var(--sn-muted)' }}>person</span> Mentor Profile</div>
+                                    <div onClick={() => { setAvatarOpen(false); navigate('/mentor/dashboard'); }} style={ddLinkStyle}><span className="material-icons" style={{ fontSize: 18, color: 'var(--sn-muted)' }}>dashboard</span> Dashboard</div>
+                                    <div onClick={() => { setAvatarOpen(false); navigate('/dashboard'); }} style={ddLinkStyle}><span className="material-icons" style={{ fontSize: 18, color: 'var(--sn-muted)' }}>swap_horiz</span> Switch to Student</div>
                                     {isAdmin && (
                                         <div onClick={() => { setAvatarOpen(false); navigate('/admin/mentor-applications'); }} style={{ ...ddLinkStyle, color: '#f5a623' }}><span className="material-icons" style={{ fontSize: 18, color: '#f5a623' }}>shield</span> Admin Panel</div>
                                     )}

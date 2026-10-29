@@ -18,13 +18,13 @@
 }
 
 .sess-left h1 span {
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .sess-left p {
-    color: #8892b0;
+    color: var(--sn-muted);
     font-size: 14px;
     margin-bottom: 20px;
     padding-left: 55px;
@@ -50,7 +50,7 @@
 
 .qs-label {
     font-size: 11px;
-    color: #8892b0;
+    color: var(--sn-muted);
 }
 
 .join-card {
@@ -72,13 +72,13 @@
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
-    color: white;
+    color:var(--sn-text);
     font-size: 14px;
     margin-bottom: 12px;
 }
 
 .join-card input:focus {
-    border-color: #A855F7;
+    border-color: var(--sn-accent);
 }
 
 .jc-btns {
@@ -90,10 +90,10 @@
 .jc-primary {
     flex: 1;
     padding: 12px;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     border: none;
     border-radius: 8px;
-    color: white;
+    color:var(--sn-text);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -101,7 +101,7 @@
 
 .jc-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(255, 79, 163, 0.3);
+    box-shadow: 0 5px 20px rgba(70,140,110, 0.3);
 }
 
 .jc-secondary {
@@ -110,7 +110,7 @@
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
-    color: white;
+    color:var(--sn-text);
     font-size: 14px;
     cursor: pointer;
 }
@@ -126,7 +126,7 @@
     align-items: center;
     gap: 4px;
     font-size: 11px;
-    color: #8892b0;
+    color: var(--sn-muted);
     background: rgba(255, 255, 255, 0.02);
     padding: 4px 10px;
     border-radius: 15px;
@@ -161,7 +161,7 @@
 }
 
 .sess-section h2 .material-icons {
-    color: #FF4FA3;
+    color: var(--sn-accent);
 }
 
 .mentors-grid {
@@ -180,7 +180,7 @@
 }
 
 .mentor-card:hover {
-    border-color: rgba(168, 85, 247, 0.3);
+    border-color: rgba(70,140,110, 0.3);
     transform: translateY(-3px);
 }
 
@@ -188,7 +188,7 @@
     width: 45px;
     height: 45px;
     border-radius: 50%;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -204,23 +204,23 @@
 
 .mentor-card p {
     font-size: 12px;
-    color: #8892b0;
+    color: var(--sn-muted);
     margin-bottom: 10px;
 }
 
 .mc-follow {
     padding: 6px 14px;
     background: transparent;
-    border: 1px solid #FF4FA3;
-    color: #FF4FA3;
+    border: 1px solid var(--sn-accent);
+    color: var(--sn-accent);
     border-radius: 6px;
     font-size: 12px;
     cursor: pointer;
 }
 
 .mc-follow:hover {
-    background: #FF4FA3;
-    color: white;
+    background: var(--sn-accent);
+    color:var(--sn-text);
 }
 
 .communities {
@@ -235,14 +235,14 @@
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 20px;
     font-size: 13px;
-    color: #ccc;
+    color: var(--sn-muted);
     cursor: pointer;
     transition: 0.3s;
 }
 
 .comm-tag:hover {
-    border-color: #FF4FA3;
-    color: white;
+    border-color: var(--sn-accent);
+    color:var(--sn-text);
 }
 
 @media(max-width:1024px) {

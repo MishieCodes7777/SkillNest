@@ -15,7 +15,9 @@ function sanitizeInput(obj) {
 }
 
 function sanitizeMiddleware(req, res, next) {
-    if (req.body) req.body = sanitizeInput(req.body);
+    // Smart Help stores bounded plain text/code and renders it only as React text.
+    // HTML sanitization here would corrupt code examples into visible entities.
+    if (req.body && !req.path.startsWith('/api/help/')) req.body = sanitizeInput(req.body);
     if (req.query) req.query = sanitizeInput(req.query);
     if (req.params) req.params = sanitizeInput(req.params);
     next();

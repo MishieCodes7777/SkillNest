@@ -57,6 +57,13 @@ router.post("/session-invite", verifyToken, async (req, res) => {
         if (!toUserId || !meetingCode) return res.status(400).json({ success: false, message: "Missing recipient or meeting code." });
         if (String(toUserId) === String(req.user.id)) return res.status(400).json({ success: false, message: "You can't invite yourself." });
 
+        if (!/^[a-f0-9-]{36}$/i.test(meetingCode)) return res.status(400).json({success:false,message:'Create a new meeting first.'});
+        const room=(await pool.query('SELECT * FROM meeting_rooms WHERE id=$1 AND owner_id=$2 AND help_request_id IS NULL AND expires_at>NOW()',[meetingCode,req.user.id])).rows[0];
+        if(!room) return res.status(403).json({success:false,message:'Only the room owner may invite participants.'});
+        if(await require('../services/helpAccess').blocked(pool,req.user.id,toUserId)) return res.status(403).json({success:false,message:'Contact is unavailable.'});
+        const connected=await pool.query("SELECT 1 FROM connections WHERE status='accepted' AND ((requester_id=$1 AND recipient_id=$2) OR (requester_id=$2 AND recipient_id=$1))",[req.user.id,toUserId]);
+        if(!connected.rowCount)return res.status(403).json({success:false,message:'Only accepted connections can be invited.'});
+        await pool.query('INSERT INTO meeting_participants(room_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[meetingCode,toUserId]);
         await notify(toUserId, 'session_invite', `${req.user.name} invited you to join a live session`, `/meeting?meet=${encodeURIComponent(meetingCode)}`);
         res.json({ success: true });
     } catch (err) {

@@ -253,7 +253,7 @@ router.put("/update-username", verifyToken, async (req, res) => {
 router.get("/users", verifyToken, async (req, res) => {
     const pool = require("../config/database");
     try {
-        const result = await pool.query("SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC");
+        const result = await pool.query("SELECT id, name, username, role, created_at FROM users ORDER BY created_at DESC LIMIT 100");
         res.json({ success: true, users: result.rows });
     } catch (err) {
         console.error("List users error:", err);
@@ -267,7 +267,7 @@ router.get("/users/search", verifyToken, async (req, res) => {
     const q = req.query.q || '';
     try {
         const result = await pool.query(
-            "SELECT id, name, email, role, created_at FROM users WHERE LOWER(name) LIKE $1 OR LOWER(email) LIKE $1 ORDER BY name",
+            "SELECT id, name, username, role, created_at FROM users WHERE LOWER(name) LIKE $1 OR LOWER(username) LIKE $1 ORDER BY name LIMIT 50",
             ['%' + q.toLowerCase() + '%']
         );
         res.json({ success: true, users: result.rows });
@@ -293,11 +293,23 @@ router.get("/stats", verifyToken, async (req, res) => {
 // GET /api/auth/users/:id - Get one user's public info (for profile pages)
 // avatar_url prefers the mentor profile photo (if they have one) over the
 // account-level one, since that's the photo they curated for their mentor page.
+router.get('/professional-profile',verifyToken,async(req,res,next)=>{
+    const pool=require('../config/database');
+    try{const result=await pool.query(`SELECT u.headline,u.about,COALESCE(NULLIF(u.linkedin_url,''),mp.linkedin,'') AS linkedin_url FROM users u LEFT JOIN mentor_profiles mp ON mp.user_id=u.id WHERE u.id=$1`,[req.user.id]);res.json({success:true,profile:result.rows[0]});}catch(e){next(e);}
+});
+router.put('/professional-profile',verifyToken,async(req,res,next)=>{
+    const pool=require('../config/database');
+    let linkedin;try{linkedin=require('../services/profileLinks').linkedinUrl(req.body.linkedin_url);}catch(e){return res.status(400).json({success:false,message:e.message});}
+    const {headline,about}=req.body;
+    if(typeof headline!=='string'||headline.length>160||typeof about!=='string'||about.length>2000)return res.status(400).json({success:false,message:'Headline: up to 160 characters. About: up to 2000 characters.'});
+    try{const result=await pool.query('WITH updated AS (UPDATE users SET headline=$1,about=$2,linkedin_url=$3,updated_at=NOW() WHERE id=$4 RETURNING headline,about,linkedin_url), synced AS (UPDATE mentor_profiles SET linkedin=$3 WHERE user_id=$4) SELECT * FROM updated',[headline.trim(),about.trim(),linkedin,req.user.id]);res.json({success:true,profile:result.rows[0]});}catch(e){next(e);}
+});
 router.get("/users/:id", verifyToken, async (req, res) => {
     const pool = require("../config/database");
     try {
         const result = await pool.query(
-            `SELECT u.id, u.name, u.username, u.role, u.roles, u.created_at,
+            `SELECT u.id, u.name, u.username, u.role, u.roles, u.created_at, u.headline, u.about,
+                    COALESCE(NULLIF(u.linkedin_url,''),mp.linkedin,'') AS linkedin_url,
                     COALESCE(NULLIF(mp.profile_photo, ''), u.avatar_url, '') AS avatar_url
              FROM users u LEFT JOIN mentor_profiles mp ON mp.user_id = u.id
              WHERE u.id = $1`,
@@ -334,7 +346,7 @@ router.put("/avatar", verifyToken, async (req, res) => {
 router.get("/mentors", verifyToken, async (req, res) => {
     const pool = require("../config/database");
     try {
-        const result = await pool.query("SELECT id, name, email, role, created_at FROM users WHERE role = 'mentor' ORDER BY created_at DESC");
+        const result = await pool.query("SELECT id, name, username, role, created_at FROM users WHERE role = 'mentor' ORDER BY created_at DESC LIMIT 100");
         res.json({ success: true, mentors: result.rows });
     } catch (err) {
         console.error("List mentors error:", err);

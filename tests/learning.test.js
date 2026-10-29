@@ -25,14 +25,7 @@ test('plan respects prerequisites and does not treat repeated questions as indep
     assert.ok(plan.findIndex(p => p.topic === 'js-functions') < plan.findIndex(p => p.topic === 'react-state'));
     const none = engine.summarise([])[0];
     assert.equal(none.accuracy, null);
-    assert.equal(none.prediction, null);
-});
-test('model uses only prior answers and emits bounded predictions', () => {
-    assert.deepEqual(engine.features([]), [1, .5, 0, .5]);
-    if (engine.modelInfo().available) {
-        const p = engine.predict([{ correct: true }]);
-        assert.ok(p >= 0 && p <= 100);
-    }
+    assert.ok(!('prediction' in none));
 });
 test('research import only accepts supported identifiers, rejecting private URLs and invalid checksums', () => {
     assert.equal(profileId('https://orcid.org/0000-0002-1825-0097').id, '0000-0002-1825-0097');

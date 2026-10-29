@@ -7,10 +7,11 @@ const navItems = [
     { path: '/', icon: 'home', label: 'Home' },
     { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
     { path: '/learning', icon: 'insights', label: 'Learning Studio' },
+    { path: '/help', icon: 'support_agent', label: 'Smart Help' },
     { path: '/research-match', icon: 'science', label: 'Research Matches' },
     { path: '/sessions', icon: 'videocam', label: 'Sessions' },
     { path: '/messages', icon: 'chat', label: 'Messages' },
-    { path: '/community', icon: 'groups', label: 'Community' },
+    { path: '/community', icon: 'groups', label: 'Community Feed' },
     { path: '/courses', icon: 'school', label: 'Courses' },
     { path: '/achievements', icon: 'military_tech', label: 'Achievements' },
     { path: '/profile', icon: 'person', label: 'Profile' },
@@ -89,14 +90,14 @@ export default function Sidebar() {
                 {isMentor ? (
                     <>
                         <div className="sn-nav-divider" />
-                        <Link to={mentorLink.path} className="sn-nav-item" onClick={() => setOpen(false)} style={{ color: '#A855F7' }}>
+                        <Link to={mentorLink.path} className="sn-nav-item" onClick={() => setOpen(false)} style={{ color: 'var(--sn-accent)' }}>
                             <span className="material-icons">{mentorLink.icon}</span> {mentorLink.label}
                         </Link>
                     </>
                 ) : (
                     <>
                         <div className="sn-nav-divider" />
-                        <Link to="/become-mentor" className="sn-nav-item" onClick={() => setOpen(false)} style={{ color: '#A855F7' }}>
+                        <Link to="/become-mentor" className="sn-nav-item" onClick={() => setOpen(false)} style={{ color: 'var(--sn-accent)' }}>
                             <span className="material-icons">workspace_premium</span> Become a Mentor
                         </Link>
                     </>

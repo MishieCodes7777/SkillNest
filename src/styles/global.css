@@ -12,8 +12,8 @@ body,
 
 body {
     font-family: 'Google Sans Flex', 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #050816;
-    color: white;
+    background: var(--sn-bg);
+    color:var(--sn-text);
 }
 
 a {

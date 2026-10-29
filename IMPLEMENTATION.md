@@ -1,3 +1,7 @@
+# Current working tree: Smart Help
+
+The Smart Help changes are LOCAL ONLY on `codex/smart-help`; the Render site still has the previous adaptive-pilot release. See `docs/SMART_HELP_RELEASE.md` for review and deployment steps.
+
 # SkillNest: adaptive learning and research profiles
 
 ## Run and preview
@@ -33,7 +37,7 @@ ORCID public work summaries are imported through the public endpoint. Support de
 - Learning Studio with JavaScript/React, Python, and SQL tracks; individual graded answers persist on the server.
 - Signed-in assessment sessions: server-held answer keys, ownership checks, atomic submission, duplicate submission protection, question versions.
 - Progress and weekly study hours saved per account and track; curriculum prerequisite ordering.
-- Actual trained next-answer logistic model and a reproducible learner-disjoint evaluation; limitations displayed in the UI.
+- Curriculum-guided practice and recent assessment evidence; the next-answer predictor is retired.
 - Course and mentor matches using explicit profile/course text, with explanations and honest empty states.
 - Mentor-only profile-link import automatically saves all returned publications, with deduplication, removal, and available full-text links. Connectors cover ORCID, Semantic Scholar, OpenAlex, and Google Scholar via SerpApi. The UI reports which connections are configured. Students need approval to become mentors; mentors retain student access without an application.
 - AI model configuration, conversation history, limited authored curriculum retrieval with references, source limitations, validated quiz/roadmap responses, saved roadmaps and per-roadmap progress.
@@ -45,7 +49,7 @@ Read `ML_GUIDE.md` for a plain-language walkthrough of exactly where the trained
 
 ## Verification
 
-`npm test` covers grading validation, hidden answer keys, prerequisites, repeated-question handling, prediction features, and safe research URL handling.
+`npm test` covers grading validation, hidden answer keys, prerequisites, repeated-question handling, practice selection, and safe research URL handling.
 
 With a preview server on port 3001 and local PostgreSQL, `npm run test:integration` creates temporary test accounts, checks authentication, account isolation, atomic grading, replay prevention, persistent progress, publication deduplication, and role restrictions, then removes its fixtures. It refuses to run against a remote database.
 
@@ -55,15 +59,10 @@ With a preview server on port 3001 and local PostgreSQL, `npm run test:integrati
 
 ## Still requires real-world validation
 
-The question bank needs independent academic review and more items. The external-data ML model needs a programming-domain pilot. Matching is not trained collaborative filtering. Imported research topics are source labels, not a SkillNest classifier. General tutoring has no live web search; references are supplied curriculum material, not automatic fact verification. Historical browser-local roadmap data is not automatically migrated; it remains in the browser and new roadmaps save to the account.
+The question bank needs independent academic review and more items. Smart Help needs real-world outcome evaluation before any trained ranking model. Matching is not trained collaborative filtering. Imported research topics are source labels, not a SkillNest classifier. General tutoring has no live web search; references are supplied curriculum material, not automatic fact verification. Historical browser-local roadmap data is not automatically migrated; it remains in the browser and new roadmaps save to the account.
 
-## Adaptive learning and research discovery update
+## Current Smart Help update
 
-- `/learning` now offers focused practice and an opt-in experimental ML prioritizer; `/preview` exercises the same recommendation logic without account writes. The authored starter bank has 44 questions, pending independent academic review.
-- Prospective, versioned forecasts are stored before submissions. `/api/learning/evidence` returns aggregate pilot evidence to signed-in learners, suppressing metrics with insufficient samples. `/api/learning/evaluation` is admin-only and includes calibration. No automatic online retraining or educational benefit claim.
-- `/research-match` matches interests to approved mentors' imported titles/topics with corpus-fitted TF-IDF, supporting papers and honest empty states. `/preview/research-match` uses explicitly labelled demonstration collections. Search covers up to the latest 5,000 publication records; no embedding service or external AI API is called.
-- `/u/:userId/research` is a public research library linked from mentor profiles. `/preview/research/papers` demonstrates reading. The built-in reader currently serves validated arXiv PDFs (maximum 25 MB); other sources use their external full-text/publisher links. No paywall bypass, summary substituted for a paper, or claim that every paper has readable full text.
-- Mentor identity on public profiles respects approved mentor membership even after adding the learner role.
-- `node scripts/export-learning.js` exports local, pseudonymised pilot data to ignored storage; `python ml/train_skillnest.py ml/data/skillnest-pilot.json` checks data sufficiency and trains a separate candidate only when ready.
+See `docs/SMART_HELP_ARCHITECTURE.md` and `docs/SMART_HELP_API.md` for the new feature. The old predictor and forecast UI have been removed without deleting legacy DB data. The 44-question Learning Studio, research-topic matching and PDF reader remain.
 
-The PDF reader uses Mozilla PDF.js with page navigation and an extracted-text alternative; it does not rely on a browser PDF plugin. Compatible dependency security fixes were applied alongside the renderer installation. The audit still reports a high-severity advisory for the existing Nodemailer dependency; a mail-library upgrade and mail-flow review remain separate work. No email was sent during verification.
+The PDF reader uses Mozilla PDF.js. Compatible dependency fixes were applied in the previous release; an existing Nodemailer advisory still needs a separate mail-library review. No email or external AI inference was sent during Smart Help tests.

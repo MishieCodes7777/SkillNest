@@ -10,27 +10,27 @@
 
 .sn-topbar .material-icons {
     font-size: 22px;
-    color: #8892b0;
+    color: var(--sn-muted);
     cursor: pointer;
     transition: 0.2s;
 }
 
 .sn-topbar .material-icons:hover {
-    color: #FF4FA3;
+    color: var(--sn-accent);
 }
 
 .tb-avatar {
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
-    color: white;
+    color:var(--sn-text);
 }
 
 .tb-notif,
@@ -66,7 +66,7 @@
 .tb-dd-title {
     padding: 10px 16px;
     font-size: 13px;
-    color: #8892b0;
+    color: var(--sn-muted);
     font-weight: 600;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -74,7 +74,7 @@
 .tb-dd-empty {
     padding: 15px 16px;
     font-size: 13px;
-    color: #555;
+    color: var(--sn-muted);
     text-align: center;
 }
 
@@ -83,7 +83,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px 16px;
-    color: #ccc;
+    color: var(--sn-muted);
     font-size: 13px;
     cursor: pointer;
     transition: 0.2s;
@@ -91,13 +91,13 @@
 }
 
 .tb-dd-link:hover {
-    background: rgba(255, 79, 163, 0.05);
-    color: white;
+    background: rgba(70,140,110, 0.05);
+    color:var(--sn-text);
 }
 
 .tb-dd-link .material-icons {
     font-size: 18px;
-    color: #8892b0;
+    color: var(--sn-muted);
 }
 
 .tb-dd-divider {
@@ -122,8 +122,8 @@
     height: 16px;
     padding: 0 3px;
     border-radius: 8px;
-    background: #FF4FA3;
-    color: white;
+    background: var(--sn-accent);
+    color:var(--sn-text);
     font-size: 10px;
     font-weight: 700;
     display: flex;
@@ -153,16 +153,16 @@
 }
 
 .tb-notif-item:hover {
-    background: rgba(255, 79, 163, 0.05);
+    background: rgba(70,140,110, 0.05);
 }
 
 .tb-notif-item.unread {
-    background: rgba(168, 85, 247, 0.07);
+    background: rgba(70,140,110, 0.07);
 }
 
 .tb-notif-icon {
     font-size: 18px !important;
-    color: #A855F7 !important;
+    color: var(--sn-accent) !important;
     margin-top: 2px;
     flex-shrink: 0;
 }
@@ -170,11 +170,11 @@
 .tb-notif-item p {
     margin: 0;
     font-size: 13px;
-    color: #ddd;
+    color: var(--sn-text);
     line-height: 1.4;
 }
 
 .tb-notif-time {
     font-size: 11px;
-    color: #666;
+    color: var(--sn-muted);
 }

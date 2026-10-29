@@ -1,179 +1,36 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React,{useEffect,useRef,useState} from 'react';
+import {Link,useNavigate} from 'react-router-dom';
+import {io} from 'socket.io-client';
 import AppLayout from '../components/AppLayout';
-import { getCurrentUser } from '../utils/auth';
+import {api} from '../utils/api';
+import {getCurrentUser} from '../utils/auth';
 import '../styles/messages.css';
-
-function authHeaders(extra) {
-    return { 'Authorization': 'Bearer ' + localStorage.getItem('token'), ...extra };
+function Attachment({message:m,onError}){
+ const [url,setUrl]=useState(''),[busy,setBusy]=useState(false);const object=useRef('');
+ useEffect(()=>()=>{if(object.current)URL.revokeObjectURL(object.current);},[]);
+ async function open(){setBusy(true);try{const r=await fetch(`/api/messages/item/${m.id}/open`,{method:'POST',headers:{Authorization:'Bearer '+localStorage.getItem('token')}});if(!r.ok)throw Error((await r.json()).message);object.current=URL.createObjectURL(await r.blob());setUrl(object.current);}catch(e){onError(e.message);}finally{setBusy(false);}}
+ function close(){URL.revokeObjectURL(object.current);object.current='';setUrl('');}
+ return <div className="msg-attachment">{url?<>{m.media_type.startsWith('image/')?<img src={url} alt={m.media_name||'Shared photo'}/>:m.media_type.startsWith('audio/')?<audio src={url} controls/>:<video src={url} controls playsInline/>}<button onClick={close}>Close attachment</button></>:<button disabled={busy||Boolean(m.view_once&&m.opened_at)} onClick={open}>{m.view_once?(m.opened_at?'Opened · no longer available':'Open once'):('Open '+(m.media_type.startsWith('image/')?'photo':m.media_type.startsWith('audio/')?'audio':'video'))}</button>}</div>;
 }
-
-function timeAgo(dateStr) {
-    if (!dateStr) return '';
-    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (diff < 60) return 'now';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h';
-    return Math.floor(diff / 86400) + 'd';
-}
-
-export default function Messages() {
-    const me = getCurrentUser();
-    const [tab, setTab] = useState('chats');
-    const [search, setSearch] = useState('');
-    const [allUsers, setAllUsers] = useState([]);
-    const [conversations, setConversations] = useState([]);
-    const [connections, setConnections] = useState([]);
-    const [currentChat, setCurrentChat] = useState(null);
-    const [messages, setMessages] = useState([]);
-    const [input, setInput] = useState('');
-    const chatRef = useRef();
-
-    useEffect(() => { loadAll(); }, []);
-    useEffect(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; }, [messages]);
-
-    function loadAll() {
-        fetch('/api/auth/users', { headers: authHeaders() }).then(r => r.json())
-            .then(d => { if (d.success) setAllUsers((d.users || []).filter(u => String(u.id) !== String(me?.id))); }).catch(() => { });
-        fetch('/api/messages', { headers: authHeaders() }).then(r => r.json())
-            .then(d => { if (d.success) setConversations(d.conversations); }).catch(() => { });
-        fetch('/api/connections', { headers: authHeaders() }).then(r => r.json())
-            .then(d => { if (d.success) setConnections(d.connections); }).catch(() => { });
-    }
-
-    function openChat(user) {
-        setCurrentChat(user);
-        fetch(`/api/messages/${user.id}`, { headers: authHeaders() }).then(r => r.json())
-            .then(d => { if (d.success) setMessages(d.messages); })
-            .catch(() => setMessages([]));
-    }
-
-    async function sendMsg() {
-        if (!input.trim() || !currentChat) return;
-        const text = input.trim();
-        setInput('');
-        try {
-            const res = await fetch(`/api/messages/${currentChat.id}`, {
-                method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ content: text }),
-            });
-            const data = await res.json();
-            if (data.success) { setMessages(prev => [...prev, data.message]); loadAll(); }
-            else alert(data.message || 'Could not send message.');
-        } catch (e) { alert('Could not connect to the server.'); }
-    }
-
-    async function sendRequest(userId) {
-        try {
-            const res = await fetch('/api/connections/request', {
-                method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ toUserId: userId }),
-            });
-            const data = await res.json();
-            if (data.success) loadAll(); else alert(data.message);
-        } catch (e) { }
-    }
-
-    async function respond(connId, action) {
-        try {
-            await fetch(`/api/connections/${connId}/${action}`, { method: 'POST', headers: authHeaders() });
-            loadAll();
-        } catch (e) { }
-    }
-
-    function connectionState(userId) {
-        return connections.find(c => String(c.user_id) === String(userId));
-    }
-
-    const incomingRequests = connections.filter(c => c.direction === 'incoming' && c.status === 'pending');
-    const acceptedIds = new Set(connections.filter(c => c.status === 'accepted').map(c => String(c.user_id)));
-
-    const chatsFiltered = conversations.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
-    const findFiltered = allUsers
-        .filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
-        .filter(u => !acceptedIds.has(String(u.id)));
-
-    return (
-        <AppLayout>
-            <div className="msg-app">
-                <div className="msg-left">
-                    <div className="msg-header">
-                        <h2>Messages</h2>
-                        <div className="msg-tabs">
-                            <button className={tab === 'chats' ? 'active' : ''} onClick={() => setTab('chats')}>Chats</button>
-                            <button className={tab === 'requests' ? 'active' : ''} onClick={() => setTab('requests')}>
-                                Requests{incomingRequests.length > 0 ? ` (${incomingRequests.length})` : ''}
-                            </button>
-                            <button className={tab === 'find' ? 'active' : ''} onClick={() => setTab('find')}>Find People</button>
-                        </div>
-                        {tab !== 'requests' && <input className="msg-search" value={search} onChange={e => setSearch(e.target.value)} placeholder={tab === 'chats' ? 'Search chats...' : 'Search by name...'} />}
-                    </div>
-                    <div className="msg-list">
-                        {tab === 'chats' && (
-                            chatsFiltered.length === 0 ? <div className="msg-empty">No conversations yet. Connect with people in "Find People" to start chatting.</div> :
-                                chatsFiltered.map(c => (
-                                    <div key={c.user_id} className={`contact-item ${currentChat?.id === c.user_id ? 'active' : ''}`} onClick={() => openChat({ id: c.user_id, name: c.name })}>
-                                        <div className="c-av">{c.name.charAt(0).toUpperCase()}</div>
-                                        <div className="c-info"><h4>{c.name}</h4><p>{c.last_message || 'Say hello!'}</p></div>
-                                        {c.unread_count > 0 && <span className="msg-badge">{c.unread_count}</span>}
-                                    </div>
-                                ))
-                        )}
-
-                        {tab === 'requests' && (
-                            incomingRequests.length === 0 ? <div className="msg-empty">No pending requests.</div> :
-                                incomingRequests.map(r => (
-                                    <div className="req-item" key={r.id}>
-                                        <div className="c-av">{r.name.charAt(0).toUpperCase()}</div>
-                                        <div className="c-info"><h4>{r.name}</h4><p>Wants to connect</p></div>
-                                        <div className="req-actions">
-                                            <button className="req-accept" onClick={() => respond(r.id, 'accept')}><span className="material-icons">check</span></button>
-                                            <button className="req-reject" onClick={() => respond(r.id, 'reject')}><span className="material-icons">close</span></button>
-                                        </div>
-                                    </div>
-                                ))
-                        )}
-
-                        {tab === 'find' && (
-                            findFiltered.length === 0 ? <div className="msg-empty">No one found.</div> :
-                                findFiltered.map(u => {
-                                    const conn = connectionState(u.id);
-                                    let btn;
-                                    if (!conn) btn = <button className="conn-btn" onClick={() => sendRequest(u.id)}>Connect</button>;
-                                    else if (conn.status === 'pending' && conn.direction === 'outgoing') btn = <button className="conn-btn pending" disabled>Requested</button>;
-                                    else if (conn.status === 'pending' && conn.direction === 'incoming') btn = <button className="conn-btn" onClick={() => setTab('requests')}>Respond</button>;
-                                    else if (conn.status === 'rejected') btn = <button className="conn-btn" onClick={() => sendRequest(u.id)}>Connect</button>;
-                                    return (
-                                        <div className="user-card" key={u.id}>
-                                            <div className="c-av">{u.name.charAt(0).toUpperCase()}</div>
-                                            <div className="c-info"><h4>{u.name}</h4><p>{u.role}</p></div>
-                                            {btn}
-                                        </div>
-                                    );
-                                })
-                        )}
-                    </div>
-                </div>
-                <div className="msg-right">
-                    {!currentChat ? (
-                        <div className="msg-empty-chat"><span className="material-icons">chat_bubble_outline</span><p>Select a conversation</p></div>
-                    ) : (
-                        <>
-                            <div className="msg-chat-header"><div className="c-av">{currentChat.name.charAt(0).toUpperCase()}</div><h3>{currentChat.name}</h3></div>
-                            <div className="msg-chat-area" ref={chatRef}>
-                                {messages.length === 0 ? <div className="msg-empty" style={{ paddingTop: '40px' }}>No messages yet. Say hello!</div> :
-                                    messages.map(m => (
-                                        <div key={m.id} className={`bubble ${String(m.sender_id) === String(me?.id) ? 'sent' : 'received'}`}>
-                                            {m.content}
-                                            <span className="bubble-time">{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
-                                    ))}
-                            </div>
-                            <div className="msg-input-area">
-                                <input value={input} onChange={e => setInput(e.target.value)} placeholder="Type a message..." onKeyPress={e => { if (e.key === 'Enter') sendMsg(); }} />
-                                <button onClick={sendMsg}><span className="material-icons">send</span></button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-        </AppLayout>
-    );
+export default function Messages(){
+ const me=getCurrentUser(),navigate=useNavigate();const [tab,setTab]=useState('chats'),[q,setQ]=useState(''),[people,setPeople]=useState([]),[chats,setChats]=useState([]),[connections,setConnections]=useState([]),[current,setCurrent]=useState(null),[messages,setMessages]=useState([]),[cursor,setCursor]=useState(null),[text,setText]=useState(''),[file,setFile]=useState(null),[once,setOnce]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[recording,setRecording]=useState(false);
+ const active=useRef(null),recorder=useRef(null),stream=useRef(null),timer=useRef(null),fileInput=useRef(null),area=useRef(null),scrollBottom=useRef(true);
+ async function loadLists(){try{const [a,b]=await Promise.all([api('/api/messages'),api('/api/connections')]);setChats(a.conversations);setConnections(b.connections);}catch(e){setError(e.message);}}
+ async function refresh(id,before){try{const d=await api(`/api/messages/${id}${before?'?before='+before:''}`);if(active.current!==id)return;if(before){scrollBottom.current=false;setMessages(old=>[...d.messages,...old.filter(m=>!d.messages.some(x=>x.id===m.id))]);setCursor(d.nextCursor);}else{scrollBottom.current=!area.current||area.current.scrollHeight-area.current.scrollTop-area.current.clientHeight<100;setMessages(old=>{const oldest=d.messages[0]?.id;return [...old.filter(m=>oldest&&m.id<oldest),...d.messages];});setCursor(old=>old===null?d.nextCursor:old);}}catch(e){setError(e.message);}}
+ useEffect(()=>{loadLists();const s=io({auth:{token:localStorage.getItem('token')}});const update=()=>{loadLists();if(active.current)refresh(active.current);};s.on('connect',()=>{setError(old=>old==='Live connection interrupted. Reconnecting…'?'':old);update();});s.on('messages-updated',update);s.on('connect_error',()=>setError('Live connection interrupted. Reconnecting…'));const visible=()=>{if(!document.hidden)update();};document.addEventListener('visibilitychange',visible);return()=>{s.disconnect();document.removeEventListener('visibilitychange',visible);clearTimeout(timer.current);if(recorder.current?.state==='recording'){recorder.current.onstop=null;recorder.current.stop();}stream.current?.getTracks().forEach(t=>t.stop());};},[]);
+ useEffect(()=>{if(tab!=='find')return;let cancelled=false;const t=setTimeout(()=>api('/api/connections/suggestions?q='+encodeURIComponent(q)).then(d=>{if(!cancelled)setPeople(d.users);}).catch(e=>{if(!cancelled)setError(e.message);}),250);return()=>{cancelled=true;clearTimeout(t);};},[tab,q,connections]);
+ useEffect(()=>{if(scrollBottom.current&&area.current)area.current.scrollTop=area.current.scrollHeight;},[messages]);
+ async function openChat(c){if(recording||busy)return;active.current=c.user_id;setCurrent(c);setMessages([]);setCursor(null);setText('');setFile(null);setError('');scrollBottom.current=true;try{const d=await api('/api/messages/'+c.user_id);if(active.current===c.user_id){setMessages(d.messages);setCursor(d.nextCursor);}loadLists();}catch(e){setError(e.message);}}
+ async function action(path,body={}){setBusy(true);setError('');try{await api(path,{method:'POST',body:JSON.stringify(body)});await loadLists();}catch(e){setError(e.message);}finally{setBusy(false);}}
+ function choose(f){if(f&&f.size>8*1024*1024){setError('Choose a file smaller than 8 MB.');return;}setFile(f);setError('');}
+ async function send(){if(busy||recording||(!text.trim()&&!file)||!current)return;setBusy(true);setError('');const id=current.user_id;try{let media;if(file){const data=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result).split(',')[1]);r.onerror=()=>reject(Error('Could not read attachment.'));r.readAsDataURL(file);});media={data,type:file.type,name:file.name};}const d=await api('/api/messages/'+id,{method:'POST',body:JSON.stringify({content:text,media,view_once:once})});if(active.current===id){setText('');setFile(null);setOnce(false);if(fileInput.current)fileInput.current.value='';scrollBottom.current=true;setMessages(old=>[...old.filter(m=>m.id!==d.message.id),d.message]);}await loadLists();}catch(e){setError(e.message+' Your draft is preserved.');}finally{setBusy(false);}}
+ async function record(){if(recording){recorder.current.stop();return;}try{if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Voice recording is unavailable in this browser. You can attach a supported audio file.');stream.current=await navigator.mediaDevices.getUserMedia({audio:true});const type=['audio/webm','audio/ogg','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t));if(!type)throw Error('No supported recording format.');const r=new MediaRecorder(stream.current,{mimeType:type}),chunks=[];let size=0;recorder.current=r;r.ondataavailable=e=>{chunks.push(e.data);size+=e.data.size;if(size>7*1024*1024&&r.state==='recording')r.stop();};r.onstop=()=>{clearTimeout(timer.current);stream.current?.getTracks().forEach(t=>t.stop());setRecording(false);choose(new File(chunks,'voice-note.'+type.split('/')[1],{type}));};r.start(1000);setRecording(true);timer.current=setTimeout(()=>{if(r.state==='recording')r.stop();},120000);}catch(e){stream.current?.getTracks().forEach(t=>t.stop());setError(e.message);}}
+ async function remove(m,scope){if(!window.confirm(scope==='everyone'?'Delete this message for both people? Copies already saved outside SkillNest cannot be removed.':'Hide this message from your chat history?'))return;try{await api('/api/messages/item/'+m.id,{method:'DELETE',body:JSON.stringify({scope})});setMessages(old=>scope==='me'?old.filter(x=>x.id!==m.id):old.map(x=>x.id===m.id?{...x,content:'',media_type:null,deleted_at:new Date().toISOString()}:x));loadLists();}catch(e){setError(e.message);}}
+ async function call(mode){setBusy(true);try{const {room}=await api('/api/meetings',{method:'POST',body:JSON.stringify({mode})});await api('/api/notifications/session-invite',{method:'POST',body:JSON.stringify({toUserId:current.user_id,meetingCode:room.id})});navigate('/meeting?meet='+room.id);}catch(e){setError(e.message);}finally{setBusy(false);}}
+ const incoming=connections.filter(c=>c.direction==='incoming'&&c.status==='pending'),outgoing=connections.filter(c=>c.direction==='outgoing'&&c.status==='pending');
+ return <AppLayout><div className={'msg-app '+(current?'has-chat':'')}><aside className="msg-left"><div className="msg-header"><h2>Messages</h2><div className="msg-tabs">{['chats','requests','find'].map(t=><button key={t} className={tab===t?'active':''} onClick={()=>{setTab(t);setQ('');}}>{t==='find'?'Find People':t==='requests'?`Requests (${incoming.length})`:'Chats'}</button>)}</div><input aria-label="Search people or chats" className="msg-search" value={q} onChange={e=>setQ(e.target.value)} placeholder={tab==='find'?'Search names or usernames':'Search chats'}/></div><div className="msg-list">
+ {tab==='chats'&&(chats.length?chats.filter(c=>c.name.toLowerCase().includes(q.toLowerCase())).map(c=><button className={'contact-item '+(current?.user_id===c.user_id?'active':'')} key={c.user_id} onClick={()=>openChat(c)}><span className="c-av">{c.name[0]}</span><span className="c-info"><h4>{c.name}</h4><p>{c.deleted_at?'Message deleted':c.last_message||(c.media_type?'Attachment':'Start a conversation')}</p></span>{c.unread_count>0&&<span className="msg-badge">{c.unread_count}</span>}</button>):<p className="msg-empty">Connect with someone in Find People to start chatting. Your messages are saved to your account.</p>)}
+ {tab==='find'&&<><p className="msg-empty">People to connect with · mutual connections first</p>{people.map(u=><div className="user-card" key={u.id}><span className="c-av">{u.name[0]}</span><div className="c-info"><Link to={'/u/'+u.id}>{u.name}</Link><p>{u.headline||u.role}</p><small>{u.mutual_count?`${u.mutual_count} mutual connections`:'Discover someone new'}</small></div><button disabled={busy} className="conn-btn" onClick={()=>action('/api/connections/request',{toUserId:u.id})}>Connect</button></div>)}{!people.length&&<p className="msg-empty">No new people match this search.</p>}</>}
+ {tab==='requests'&&<>{!incoming.length&&<p className="msg-empty">No incoming requests.</p>}{incoming.map(r=><div className="req-item" key={r.id}><div className="c-info"><Link to={'/u/'+r.user_id}>{r.name}</Link><p>Wants to connect</p></div><button disabled={busy} onClick={()=>action(`/api/connections/${r.id}/accept`)}>Accept</button><button disabled={busy} onClick={()=>action(`/api/connections/${r.id}/reject`)}>Decline</button></div>)}{!!outgoing.length&&<p className="msg-empty">Sent requests</p>}{outgoing.map(r=><p className="req-item" key={r.id}>{r.name} · awaiting response</p>)}</>}
+ </div></aside><section className="msg-right">{error&&<p role="alert" className="sn-call-notice">{error}</p>}{!current?<div className="msg-empty-chat"><h2>Your conversations</h2><p>Connect, share and learn together.</p><p>Messages and supported media stay in your account until deleted.</p></div>:<><header className="msg-chat-header"><button aria-label="Back to conversations" disabled={recording||busy} onClick={()=>{setCurrent(null);active.current=null;}}>←</button><Link to={'/u/'+current.user_id}><h3>{current.name}</h3></Link><button disabled={busy||recording} onClick={()=>call('voice')}>Audio call</button><button disabled={busy||recording} onClick={()=>call('video')}>Video call</button></header><div className="msg-chat-area" ref={area}>{cursor&&<button onClick={()=>refresh(current.user_id,cursor)}>Load older messages</button>}{!messages.length&&<p className="msg-empty">Start your conversation.</p>}{messages.map(m=><article key={m.id} className={'bubble '+(m.sender_id===me?.id?'sent':'received')}><p style={{whiteSpace:'pre-wrap'}}>{m.deleted_at?'This message was deleted':m.content}</p>{!m.deleted_at&&m.media_type&&(m.view_once&&m.sender_id===me?.id?<p>{m.opened_at?'View-once attachment opened':'View-once attachment sent'}</p>:<Attachment key={m.id+':'+Boolean(m.deleted_at)} message={m} onError={setError}/>)}<span className="bubble-time">{new Date(m.created_at).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span><details><summary aria-label="Message options">•••</summary><button onClick={()=>remove(m,'me')}>Delete for me</button>{m.sender_id===me?.id&&!m.deleted_at&&<button onClick={()=>remove(m,'everyone')}>Delete for everyone</button>}</details></article>)}</div><div className="msg-compose">{file&&<p>{file.name} · {(file.size/1024/1024).toFixed(1)} MB <button onClick={()=>setFile(null)}>Remove</button></p>}<div className="msg-input-area"><input aria-label="Message" maxLength={3000} value={text} onChange={e=>setText(e.target.value)} placeholder="Write a message" onKeyDown={e=>{if(e.key==='Enter'&&!e.nativeEvent.isComposing)send();}}/><button disabled={busy||recording||(!text.trim()&&!file)} onClick={send}>{busy?'Sending…':'Send'}</button></div><div className="msg-tools"><label>Attach<input ref={fileInput} aria-label="Attach photo video or audio" type="file" accept="image/jpeg,image/png,video/mp4,video/webm,audio/webm,audio/ogg,audio/mp4" disabled={busy||recording} onChange={e=>choose(e.target.files[0])}/></label><button disabled={busy} onClick={record}>{recording?'Stop recording':'Record voice note'}</button>{file&&<label><input type="checkbox" checked={once} onChange={e=>setOnce(e.target.checked)}/>View once</label>}<small>{recording?'Recording · maximum 2 minutes':'8 MB per attachment. View once cannot prevent screenshots or recordings.'}</small></div></div></>}</section></div></AppLayout>;
 }

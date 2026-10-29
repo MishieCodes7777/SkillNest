@@ -20,10 +20,10 @@
     width: 100%;
     min-height: 70px;
     resize: vertical;
-    background: #1c1c2e;
+    background: var(--sn-raised);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
-    color: white;
+    color:var(--sn-text);
     font-size: 14px;
     font-family: inherit;
     padding: 12px 14px;
@@ -41,20 +41,20 @@
 
 .cf-image-input {
     flex: 1;
-    background: #1c1c2e;
+    background: var(--sn-raised);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
-    color: white;
+    color:var(--sn-text);
     font-size: 13px;
     padding: 9px 12px;
 }
 
 .cf-post-btn {
     padding: 9px 22px;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     border: none;
     border-radius: 8px;
-    color: white;
+    color:var(--sn-text);
     font-weight: 600;
     font-size: 13.5px;
     cursor: pointer;
@@ -64,7 +64,7 @@
 
 .cf-empty {
     text-align: center;
-    color: #8892b0;
+    color: var(--sn-muted);
     font-size: 14px;
     padding: 40px 20px;
 }
@@ -81,7 +81,7 @@
 .cf-post-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 
 .cf-post-author { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; min-width: 0; }
-.cf-post-author:hover .cf-author-name { color: #A855F7; }
+.cf-post-author:hover .cf-author-name { color: var(--sn-accent); }
 
 .cf-avatar {
     border-radius: 50%;
@@ -89,23 +89,23 @@
     flex-shrink: 0;
 }
 .cf-avatar-fallback {
-    background: linear-gradient(45deg, #A855F7, #FF4FA3);
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    color: white;
+    color:var(--sn-text);
 }
 .cf-avatar-sm { width: 30px; height: 30px; font-size: 12px; }
 
 .cf-author-name { font-size: 14.5px; font-weight: 600; transition: color 0.15s; }
-.cf-author-meta { font-size: 12px; color: #8892b0; margin-top: 1px; }
+.cf-author-meta { font-size: 12px; color: var(--sn-muted); margin-top: 1px; }
 
 .cf-delete-btn {
     background: none;
     border: none;
     cursor: pointer;
-    color: #666;
+    color: var(--sn-muted);
     display: flex;
     padding: 4px;
     border-radius: 6px;
@@ -115,7 +115,7 @@
 .cf-post-content {
     font-size: 14.5px;
     line-height: 1.65;
-    color: #dcdcea;
+    color: var(--sn-text);
     margin: 0 0 12px;
     white-space: pre-wrap;
     word-break: break-word;
@@ -144,7 +144,7 @@
     gap: 6px;
     background: none;
     border: none;
-    color: #8892b0;
+    color: var(--sn-muted);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -152,10 +152,10 @@
     border-radius: 8px;
     transition: 0.15s;
 }
-.cf-action:hover { background: rgba(255, 255, 255, 0.04); color: #ccc; }
+.cf-action:hover { background: rgba(255, 255, 255, 0.04); color: var(--sn-muted); }
 .cf-action .material-icons { font-size: 18px; }
-.cf-action.active { color: #FF4FA3; }
-.cf-action.active .material-icons { color: #FF4FA3; }
+.cf-action.active { color: var(--sn-accent); }
+.cf-action.active .material-icons { color: var(--sn-accent); }
 
 .cf-comments {
     margin-top: 12px;
@@ -166,7 +166,7 @@
     gap: 10px;
 }
 
-.cf-comments-loading { font-size: 12.5px; color: #666; }
+.cf-comments-loading { font-size: 12.5px; color: var(--sn-muted); }
 
 .cf-comment { display: flex; gap: 10px; }
 .cf-comment-body {
@@ -175,17 +175,17 @@
     padding: 8px 12px;
     flex: 1;
 }
-.cf-comment-name { font-size: 12.5px; font-weight: 600; color: #c4a5ff; margin-right: 6px; }
-.cf-comment-text { font-size: 13px; color: #ccc; }
-.cf-comment-time { font-size: 10.5px; color: #666; margin-top: 3px; }
+.cf-comment-name { font-size: 12.5px; font-weight: 600; color: var(--sn-accent); margin-right: 6px; }
+.cf-comment-text { font-size: 13px; color: var(--sn-muted); }
+.cf-comment-time { font-size: 10.5px; color: var(--sn-muted); margin-top: 3px; }
 
 .cf-comment-input-row { display: flex; gap: 8px; margin-top: 2px; }
 .cf-comment-input-row input {
     flex: 1;
-    background: #1c1c2e;
+    background: var(--sn-raised);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 20px;
-    color: white;
+    color:var(--sn-text);
     font-size: 13px;
     padding: 9px 16px;
 }
@@ -194,8 +194,8 @@
     height: 36px;
     border-radius: 50%;
     border: none;
-    background: linear-gradient(45deg, #FF4FA3, #A855F7);
-    color: white;
+    background: linear-gradient(45deg, var(--sn-accent), var(--sn-accent));
+    color:var(--sn-text);
     display: flex;
     align-items: center;
     justify-content: center;

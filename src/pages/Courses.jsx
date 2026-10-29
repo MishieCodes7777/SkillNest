@@ -190,7 +190,7 @@ export default function Courses() {
     }
 
     return (
-        <AppLayout>
+        <AppLayout><a href="/help/ask" style={{display:'block',padding:'12px 50px',color:'#e0b4ff'}}>Stuck on a course topic? Ask Smart Help →</a>
             <div style={{ height: 'calc(100vh - 60px)', position: 'relative' }}>
                 {!selected ? (
                     <>

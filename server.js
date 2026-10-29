@@ -5,8 +5,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const hpp = require("hpp");
 const morgan = require("morgan");
-const jwt = require("jsonwebtoken");
 require("dotenv").config();
+require('./config/validateEnvironment')();
 
 // Initialize database
 require("./config/database");
@@ -25,7 +25,8 @@ app.use(helmet({
             // inline style attributes, which need 'unsafe-inline' here to keep working.
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
-            imgSrc: ["'self'", "data:", "https://images.unsplash.com", "https://www.gstatic.com"],
+            imgSrc: ["'self'", "data:", "blob:", "https://images.unsplash.com", "https://www.gstatic.com"],
+            mediaSrc: ["'self'", "blob:"],
             connectSrc: ["'self'", "ws:", "wss:", "https://accounts.google.com"],
             // The Google Sign-In button renders inside an iframe from Google's origin.
             frameSrc: ["https://accounts.google.com"],
@@ -52,9 +53,11 @@ app.use(cors({
 // it runs first; body-parser skips re-parsing a body it's already read.
 app.use("/api/mentor/profile", express.json({ limit: "3mb" }));
 app.use("/api/auth/avatar", express.json({ limit: "3mb" }));
+app.use('/api/messages', express.json({limit:'12mb'}));
 app.use('/api/ai/chat', express.json({ limit: '96kb' }));
 app.use('/api/ai/resume-review', express.json({ limit: '48kb' }));
 app.use('/api/research/confirm', express.json({ limit: '96kb' }));
+app.use('/api/help', express.json({ limit: '20kb' }));
 
 // 4. Body parser with size limit (10kb max)
 app.use(express.json({ limit: "10kb" }));
@@ -106,6 +109,9 @@ app.use("/api/messages", messagesRoutes);
 app.use("/api/turn-credentials", turnRoutes);
 app.use('/api/learning', require('./routes/learning'));
 app.use('/api/research', require('./routes/research'));
+app.use('/api/help', require('./routes/help'));
+app.use('/api/topic-model', require('./routes/topicModel'));
+app.use('/api/meetings', require('./routes/meetings'));
 
 // ===== STATIC FILES =====
 const distPath = path.join(__dirname, "dist");
@@ -151,66 +157,10 @@ const io = require("socket.io")(server, {
     cors: { origin: allowedOrigins, methods: ["GET", "POST"] }
 });
 
-// Require a valid session for every meeting-room connection, and trust ONLY
-// the name from the verified JWT — never a client-supplied display name.
-// (Previously the client could pass any name it liked via `data.displayName`,
-// which is how one user could show up in a room labeled with someone else's name.)
-io.use((socket, next) => {
-    const token = socket.handshake.auth?.token;
-    if (!token) return next(new Error("Authentication required"));
-    try {
-        socket.user = jwt.verify(token, process.env.JWT_SECRET);
-        next();
-    } catch (err) {
-        next(new Error("Invalid or expired session"));
-    }
-});
-
-let userConnections = [];
-
-io.on("connection", (socket) => {
-    socket.on("userconnect", (data) => {
-        const others = userConnections.filter(p => p.meeting_id === data.meetingid);
-        // user_id here is the real numeric account id (trusted, from the verified
-        // JWT) — used by the frontend to fetch that person's profile photo.
-        userConnections.push({ connectionId: socket.id, user_id: socket.user.id, meeting_id: data.meetingid });
-        socket.emit("all-users", others);
-        others.forEach(user => { socket.to(user.connectionId).emit("user-joined", { connId: socket.id, user_id: socket.user.id }); });
-    });
-
-    socket.on("signal", (data) => { socket.to(data.to).emit("signal", { from: socket.id, signal: data.signal }); });
-
-    socket.on("chat-message", (data) => {
-        const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
-        const safeData = { ...data, name: socket.user.name };
-        meetUsers.forEach(u => { socket.to(u.connectionId).emit("chat-message", safeData); });
-    });
-
-    socket.on("hand-raised", (data) => {
-        const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
-        meetUsers.forEach(u => { socket.to(u.connectionId).emit("hand-raised", data); });
-    });
-
-    // Mic/camera state — relayed with the sender's own socket id attached so
-    // the receiving side can map it to the right video tile (mirrors "signal").
-    socket.on("mic-toggle", (data) => {
-        const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
-        meetUsers.forEach(u => { socket.to(u.connectionId).emit("mic-toggle", { from: socket.id, muted: data.muted }); });
-    });
-    socket.on("cam-toggle", (data) => {
-        const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
-        meetUsers.forEach(u => { socket.to(u.connectionId).emit("cam-toggle", { from: socket.id, camOn: data.camOn }); });
-    });
-    socket.on("screen-share-toggle", (data) => {
-        const meetUsers = userConnections.filter(p => p.meeting_id === data.meetingid && p.connectionId !== socket.id);
-        meetUsers.forEach(u => { socket.to(u.connectionId).emit("screen-share-toggle", { from: socket.id, sharing: data.sharing }); });
-    });
-
-    socket.on("disconnect", () => {
-        const disUser = userConnections.find(p => p.connectionId === socket.id);
-        if (!disUser) return;
-        const meetingid = disUser.meeting_id;
-        userConnections = userConnections.filter(p => p.connectionId !== socket.id);
-        userConnections.filter(p => p.meeting_id === meetingid).forEach(user => { socket.to(user.connectionId).emit("user-left", { connId: socket.id }); });
-    });
-});
+require('./services/meetingSockets').attach(io, require('./config/database'));
+app.set('io',io);
+// Enforce retention without depending on a user opening the matching screen.
+const housekeeping=setInterval(async()=>{
+    const db=require('./config/database');if(!db.initialized)return;
+    try{await db.query("DELETE FROM help_match_events WHERE created_at<NOW()-INTERVAL '30 days'");await db.query("UPDATE help_requests SET status='expired' WHERE status='pending' AND expires_at<=NOW()");}catch{console.error('Smart Help housekeeping failed');}
+},60*60*1000);housekeeping.unref();
